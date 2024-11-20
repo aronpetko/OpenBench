@@ -21,3 +21,5 @@ Media/Events/*
 
 *.lock
 *.epd
+
+webhooks.json
