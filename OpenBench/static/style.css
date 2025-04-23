@@ -282,19 +282,19 @@ body, html, main{
 }
 
 #content .statblock-green {
-    background-color: #76D576;
+    background-color: #76D58E;
 }
 
 #content .statblock-blue {
-    background-color: #60F0FF;
+    background-color: #8CE3EC;
 }
 
 #content .statblock-yellow {
-    background-color: #EFF891;
+    background-color: #C6CE6F;
 }
 
 #content .statblock-red {
-    background-color: #FA9696;
+    background-color: #FFA590;
 }
 
 #content .redlink {
