@@ -71,10 +71,10 @@ def shortStatBlock(test):
 
     elif test.test_mode == 'SPRT':
         lower, elo, upper = OpenBench.stats.Elo(test.results())
-        elo_line = '(%0.2f +- %0.2f)' % (elo, max(upper - elo, elo - lower))
+        elo_line = '%0.2f +- %0.2f' % (elo, max(upper - elo, elo - lower))
         llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
             test.currentllr, test.lowerllr, test.upperllr, test.elolower, test.eloupper)
-        statlines = [llr_line, tri_line, '%s %s' % (penta_line, elo_line)] if test.use_penta else [llr_line, tri_line]
+        statlines = [llr_line, tri_line, '%s | Elo: %s' % (penta_line, elo_line)] if test.use_penta else [llr_line, tri_line]
 
     elif test.test_mode == 'GAMES':
         lower, elo, upper = OpenBench.stats.Elo(test.results())
