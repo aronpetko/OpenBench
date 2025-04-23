@@ -61,7 +61,7 @@ def gitDiffLink(test):
 def shortStatBlock(test):
 
     tri_line   = 'Games: %d W: %d L: %d D: %d' % test.as_nwld()
-    penta_line = 'Ptnml(0-2): %d, %d, %d, %d, %d' % test.as_penta()
+    penta_line = 'Ptnml(0-2): %d, %d, %d, %d, %d | %d, %d, %d' % (test.as_penta(), test.as_nwld())
 
     if test.test_mode == 'SPSA':
         statlines = [
@@ -71,10 +71,10 @@ def shortStatBlock(test):
 
     elif test.test_mode == 'SPRT':
         lower, elo, upper = OpenBench.stats.Elo(test.results())
-        elo_line = 'Elo: %0.2f +- %0.2f (95%%)' % (elo, max(upper - elo, elo - lower))
         llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
             test.currentllr, test.lowerllr, test.upperllr, test.elolower, test.eloupper)
-        statlines = [elo_line, llr_line, tri_line] if test.use_penta else [elo_line, llr_line, tri_line]
+        statlines = [elo_line, llr_line, tri_line, penta_line] if test.use_penta else [elo_line, llr_line, tri_line]
+        elo_line = 'Elo: %0.2f +- %0.2f (95%%)' % (elo, max(upper - elo, elo - lower))
 
     elif test.test_mode == 'GAMES':
         lower, elo, upper = OpenBench.stats.Elo(test.results())
