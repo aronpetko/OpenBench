@@ -70,6 +70,7 @@ def shortStatBlock(test):
             '%d/%d Games Played' % (test.games, 2 * test.spsa['iterations'] * test.spsa['pairs_per'])]
 
     elif test.test_mode == 'SPRT':
+        lower, elo, upper = OpenBench.stats.Elo(test.results())
         elo_line = '(%0.2f +- %0.2f)' % (elo, max(upper - elo, elo - lower))
         llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
             test.currentllr, test.lowerllr, test.upperllr, test.elolower, test.eloupper)
