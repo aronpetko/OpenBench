@@ -402,7 +402,7 @@ def network_edit(request, engine, network):
 
 # Struture of webhooks.json
 # {
-#     "url": "{webhook url}",
+#     "url": ["{str: webhook url}", ...],
 #     "data": {
 #         "{OB username}": {
 #             "userid" : ["{str: Discord user ID}", ...]
@@ -422,7 +422,7 @@ def notify_webhook(request, test_id):
         webhooks = json.load(webhooks)
 
         # Fetch the specific webhook for this test author
-        webhook_url = webhooks["url"]
+        webhook_urls = webhooks["url"]
 
         # Compute mentions
         mentions = set()
@@ -453,16 +453,19 @@ def notify_webhook(request, test_id):
         elif test.wins < test.losses:
             color = 0xFA4E4E
 
-        return requests.post(webhook_url, json={
-            'content': " ".join(id_to_mention(id) for id in mentions),
-            'embeds': [{
-                'author': { 'name': test.author },
-                'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
-                'url': request.build_absolute_uri(f'/test/{test_id}'),
-                'color': color,
-                'description': f'```\n{longStatBlock(test)}\n```',
-            }]
-        })
+        return [
+            requests.post(webhook_url, json={
+                'content': " ".join(id_to_mention(id) for id in mentions),
+                'embeds': [{
+                    'author': { 'name': test.author },
+                    'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
+                    'url': request.build_absolute_uri(f'/test/{test_id}'),
+                    'color': color,
+                    'description': f'```\n{longStatBlock(test)}\n```',
+                }]
+            })
+            for webhook_url in webhook_urls
+        ]
 
 def update_test(request, machine):
 
