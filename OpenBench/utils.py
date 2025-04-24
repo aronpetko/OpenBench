@@ -18,6 +18,7 @@
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+from contextlib import ExitStack
 import datetime
 import hashlib
 import json
@@ -400,43 +401,34 @@ def network_edit(request, engine, network):
 
     return OpenBench.views.redirect(request, '/networks/%s' % (network.engine), status='Applied changes')
 
-# Struture of webhooks.json
-# {
-#     "url": ["{str: webhook url}", ...],
-#     "data": {
-#         "{OB username}": {
-#             "userid" : ["{str: Discord user ID}", ...]
-#         }
-#         "{OB engine}": {
-#             "userid" : ["{str: Discord user ID}", ...]
-#         }
-#     }
-# }
 def notify_webhook(request, test_id):
     test = Test.objects.get(id=test_id)
 
-    def id_to_mention(id):
-        return f"<@{id}>"
+    with ExitStack() as exit_stack:
+        webhooks     = exit_stack.enter_context(open("webhooks"))
+        webhook_urls = webhooks.readlines()
 
-    with open('webhooks.json') as webhooks:
-        webhooks = json.load(webhooks)
-
-        # Fetch the specific webhook for this test author
-        webhook_urls = webhooks["url"]
+        # Read mention info for discord
+        discord_info = exit_stack.enter_context(open("discord.json"))
+        discord_info = json.load(discord_info)
 
         # Compute mentions
+        def name_to_mention(name):
+            return f"<@{discord_info["ids"][name]}>"
+
         mentions = set()
 
-        if test.author.lower() in webhooks["data"]:
-            mentions.update(webhooks["data"][test.author.lower()]["userid"])
+        if test.author.lower() in discord_info["users"]:
+            mentions.update(discord_info["users"][test.author.lower()])
 
-        if test.base_engine.lower() in webhooks["data"]:
-            mentions.update(webhooks["data"][test.base_engine.lower()]["userid"])
+        if test.base_engine.lower() in discord_info["engines"]:
+            mentions.update(discord_info["engines"][test.base_engine.lower()])
 
-        if test.dev_engine.lower() in webhooks["data"]:
-            mentions.update(webhooks["data"][test.dev_engine.lower()]["userid"])
+        if test.dev_engine.lower() in discord_info["engines"]:
+            mentions.update(discord_info["engines"][test.dev_engine.lower()])
 
         mentions = sorted(list(mentions))
+        message  = " ".join(name_to_mention(name) for name in mentions)
 
         # Compute stats
         lower, elo, upper = OpenBench.stats.Elo(test.results())
@@ -455,7 +447,7 @@ def notify_webhook(request, test_id):
 
         return [
             requests.post(webhook_url, json={
-                'content': " ".join(id_to_mention(id) for id in mentions),
+                'content': message,
                 'embeds': [{
                     'author': { 'name': test.author },
                     'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
