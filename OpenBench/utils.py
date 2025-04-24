@@ -412,6 +412,15 @@ def notify_webhook(request, test_id):
         discord_info = exit_stack.enter_context(open('discord.json'))
         discord_info = json.load(discord_info)
 
+        # Compute stats
+        lower, elo, upper = OpenBench.stats.Elo(test.results())
+        error   = max(upper - elo, elo - lower)
+        elo     = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
+        error   = OpenBench.templatetags.mytags.twoDigitPrecision(error)
+        h0      = OpenBench.templatetags.mytags.twoDigitPrecision(test.elolower)
+        h1      = OpenBench.templatetags.mytags.twoDigitPrecision(test.eloupper)
+        outcome = 'passed' if test.passed else 'failed'
+
         # Compute mentions
         def name_to_mention(name):
             return f'<@{discord_info["ids"][name]}>'
@@ -430,12 +439,27 @@ def notify_webhook(request, test_id):
         mentions = sorted(list(mentions))
         message  = "Congratulations! " + " ".join(name_to_mention(name) for name in mentions)
 
-        # Compute stats
-        lower, elo, upper = OpenBench.stats.Elo(test.results())
-        error   = max(upper - elo, elo - lower)
-        elo     = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
-        error   = OpenBench.templatetags.mytags.twoDigitPrecision(error)
-        outcome = 'passed' if test.passed else 'failed'
+        # Compute test metadata
+        tokens = test.dev_options.split(' ')
+        dev_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
+        ] + ["None"])[0]
+        dev_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
+        ] + ["None"])[0]
+
+        tokens = test.base_options.split(' ')
+        base_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
+        ] + ["None"])[0]
+        base_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
+        ] + ["None"])[0]
+
+        if test.test_mode == 'GAMES':
+            mode_string = f'{test.max_games} games'
+        else:
+            mode_string = f'SPRT [{h0}, {h1}]'
 
         # Compute color
         # Green if passing, red if failing.
@@ -448,17 +472,56 @@ def notify_webhook(request, test_id):
         elif test.wins < test.losses:
             color = 0xFFA590
 
+        payload = {
+            'content': message,
+            'embeds': [{
+                'author': { 'name': test.author },
+                'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
+                'url': request.build_absolute_uri(f'/test/{test_id}'),
+                'color': color,
+                'description': f'```\n{longStatBlock(test)}\n```',
+                'fields': [
+                    {
+                        'name': 'Dev Config',
+                        'value': f'{test.dev_time_control}s Threads={dev_threads} Hash={dev_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Base Config',
+                        'value': f'{test.base_time_control}s Threads={base_threads} Hash={base_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Mode',
+                        'value': mode_string,
+                    },
+                    {
+                        'name': 'Wins',
+                        'value': f'{test.wins}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Losses',
+                        'value': f'{test.losses}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Draws',
+                        'value': f'{test.draws}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Elo',
+                        'value': f'{elo} ± {error} (95%)',
+                    },
+                ] + test.use_penta * [{
+                    'name': 'Pentanomial (0-2)',
+                    'value': f'{test.LL}, {test.LD}, {test.DD}, {test.DW}, {test.WW}'
+                }],
+        }]}
+
         return [
-            requests.post(webhook_url, json={
-                'content': message,
-                'embeds': [{
-                    'author': { 'name': test.author },
-                    'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
-                    'url': request.build_absolute_uri(f'/test/{test_id}'),
-                    'color': color,
-                    'description': f'```\n{longStatBlock(test)}\n```',
-                }]
-            })
+            requests.post(webhook_url, json=payload)
             for webhook_url in webhook_urls
         ]
 
@@ -569,7 +632,7 @@ def update_test(request, machine):
     )
 
     # Send update to webhook, if it exists
-    if test.finished and os.path.exists('webhooks.json'):
+    if test.finished and os.path.exists("webhooks") and os.path.exists("discord.json"):
         notify_webhook(request, test_id)
 
     return [{}, { 'stop' : True }][test.finished]
