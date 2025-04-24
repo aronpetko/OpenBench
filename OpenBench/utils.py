@@ -42,7 +42,6 @@ from OpenSite.settings import MEDIA_ROOT, PROJECT_PATH
 from OpenBench.config import OPENBENCH_CONFIG
 from OpenBench.models import *
 from OpenBench.stats import TrinomialSPRT, PentanomialSPRT
-from OpenBench.templatetags.mytags import longStatBlock
 
 
 import OpenBench.views
@@ -479,7 +478,6 @@ def notify_webhook(request, test_id):
                 'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
                 'url': request.build_absolute_uri(f'/test/{test_id}'),
                 'color': color,
-                'description': f'```\n{longStatBlock(test)}\n```',
                 'fields': [
                     {
                         'name': 'Dev Config',
