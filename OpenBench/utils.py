@@ -400,16 +400,43 @@ def network_edit(request, engine, network):
 
     return OpenBench.views.redirect(request, '/networks/%s' % (network.engine), status='Applied changes')
 
+# Struture of webhooks.json
+# {
+#     "url": "{webhook url}",
+#     "data": {
+#         "{OB username}": {
+#             "userid" : ["{str: Discord user ID}", ...]
+#         }
+#         "{OB engine}": {
+#             "userid" : ["{str: Discord user ID}", ...]
+#         }
+#     }
+# }
 def notify_webhook(request, test_id):
     test = Test.objects.get(id=test_id)
+
+    def id_to_mention(id):
+        return f"<@{id}>"
+
     with open('webhooks.json') as webhooks:
         webhooks = json.load(webhooks)
-        # If the test author does not have a webhook, exit now
-        if test.author.lower() not in webhooks:
-            return
 
         # Fetch the specific webhook for this test author
-        webhook = webhooks[test.author.lower()]
+        webhook_url = webhooks["url"]
+
+        # Compute mentions
+        mentions = set()
+
+        if test.author.lower() in webhooks["data"]:
+            mentions.update(webhooks["data"][test.author.lower()]["userid"])
+
+        if test.base_engine.lower() in webhooks["data"]:
+            mentions.update(webhooks["data"][test.base_engine.lower()]["userid"])
+
+        if test.dev_engine.lower() in webhooks["data"]:
+            mentions.update(webhooks["data"][test.dev_engine.lower()]["userid"])
+
+        mentions = sorted(list(mentions))
 
         # Compute stats
         lower, elo, upper = OpenBench.stats.Elo(test.results())
@@ -418,6 +445,7 @@ def notify_webhook(request, test_id):
         error = OpenBench.templatetags.mytags.twoDigitPrecision(error)
         outcome = 'passed' if test.passed else 'failed'
 
+        # Compute color
         # Green if passing, red if failing.
         color = 0xFEFF58
         if test.passed:
@@ -425,8 +453,8 @@ def notify_webhook(request, test_id):
         elif test.wins < test.losses:
             color = 0xFA4E4E
 
-        return requests.post(webhook, json={
-            'username': test.dev_engine,
+        return requests.post(webhook_url, json={
+            'content': " ".join(id_to_mention(id) for id in mentions),
             'embeds': [{
                 'author': { 'name': test.author },
                 'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
