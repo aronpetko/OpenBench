@@ -405,43 +405,43 @@ def notify_webhook(request, test_id):
     test = Test.objects.get(id=test_id)
 
     with ExitStack() as exit_stack:
-        webhooks     = exit_stack.enter_context(open("webhooks"))
+        webhooks     = exit_stack.enter_context(open('webhooks'))
         webhook_urls = webhooks.readlines()
 
         # Read mention info for discord
-        discord_info = exit_stack.enter_context(open("discord.json"))
+        discord_info = exit_stack.enter_context(open('discord.json'))
         discord_info = json.load(discord_info)
 
         # Compute mentions
         def name_to_mention(name):
-            return f"<@{discord_info["ids"][name]}>"
+            return f'<@{discord_info["ids"][name]}>'
 
         mentions = set()
 
-        if test.author.lower() in discord_info["users"]:
-            mentions.update(discord_info["users"][test.author.lower()])
+        if test.author.lower() in discord_info['users']:
+            mentions.update(discord_info['users'][test.author.lower()])
 
-        if test.base_engine.lower() in discord_info["engines"]:
-            mentions.update(discord_info["engines"][test.base_engine.lower()])
+        if test.base_engine.lower() in discord_info['engines']:
+            mentions.update(discord_info['engines'][test.base_engine.lower()])
 
-        if test.dev_engine.lower() in discord_info["engines"]:
-            mentions.update(discord_info["engines"][test.dev_engine.lower()])
+        if test.dev_engine.lower() in discord_info['engines']:
+            mentions.update(discord_info['engines'][test.dev_engine.lower()])
 
         mentions = sorted(list(mentions))
         message  = " ".join(name_to_mention(name) for name in mentions)
 
         # Compute stats
         lower, elo, upper = OpenBench.stats.Elo(test.results())
-        error = max(upper - elo, elo - lower)
-        elo   = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
-        error = OpenBench.templatetags.mytags.twoDigitPrecision(error)
+        error   = max(upper - elo, elo - lower)
+        elo     = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
+        error   = OpenBench.templatetags.mytags.twoDigitPrecision(error)
         outcome = 'passed' if test.passed else 'failed'
 
         # Compute color
         # Green if passing, red if failing.
         color = 0xC6CE6F
         if test.passed:
-            if test.elolower + test.eloupper < 0:
+            if test.test_mode == 'SPRT' and test.elolower + test.eloupper < 0:
                 color = 0x8CE3EC
             else:
                 color = 0x76D58E
