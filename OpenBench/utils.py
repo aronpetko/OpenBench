@@ -439,11 +439,14 @@ def notify_webhook(request, test_id):
 
         # Compute color
         # Green if passing, red if failing.
-        color = 0xFEFF58
+        color = 0xC6CE6F
         if test.passed:
-            color = 0x37F769
+            if test.elolower + test.eloupper < 0:
+                color = 0x8CE3EC
+            else:
+                color = 0x76D58E
         elif test.wins < test.losses:
-            color = 0xFA4E4E
+            color = 0xFFA590
 
         return [
             requests.post(webhook_url, json={
