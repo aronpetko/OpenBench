@@ -428,7 +428,7 @@ def notify_webhook(request, test_id):
             mentions.update(discord_info['engines'][test.dev_engine.lower()])
 
         mentions = sorted(list(mentions))
-        message  = " ".join(name_to_mention(name) for name in mentions)
+        message  = "Congratulations! " + " ".join(name_to_mention(name) for name in mentions)
 
         # Compute stats
         lower, elo, upper = OpenBench.stats.Elo(test.results())
