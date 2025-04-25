@@ -10,7 +10,7 @@
         "micpilar": "1028207488547434517",
         "styxdoto": "457017004373704705",
         "yoshie2000": "415167192296849409",
-        "darkneutrino": "526824419247521793",
+        "darkneutrino": "526824419247521793"
     },
     "users": {
         "mid": [
@@ -45,7 +45,7 @@
         ],
         "darkneutrino": [
             "darkneutrino"
-        ],
+        ]
     },
     "engines": {
         "serendipity": [
@@ -74,6 +74,6 @@
         ],
         "illumina": [
             "mergener"
-        ],
+        ]
     }
 }
