@@ -519,7 +519,7 @@ def notify_webhook(request, test_id):
         }]}
 
         return [
-            requests.post(webhook_url, json=payload)
+            requests.post(webhook_url.rstrip(), json=payload)
             for webhook_url in webhook_urls
         ]
 
