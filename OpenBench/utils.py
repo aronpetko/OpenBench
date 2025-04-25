@@ -27,6 +27,7 @@ import random
 import re
 import requests
 
+from contextlib import ExitStack
 from django.contrib.auth import authenticate
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
@@ -399,6 +400,128 @@ def network_edit(request, engine, network):
 
     return OpenBench.views.redirect(request, '/networks/%s' % (network.engine), status='Applied changes')
 
+def notify_webhook(request, test_id):
+    test = Test.objects.get(id=test_id)
+
+    with ExitStack() as exit_stack:
+        webhooks     = exit_stack.enter_context(open('webhooks'))
+        webhook_urls = webhooks.readlines()
+
+        # Read mention info for discord
+        discord_info = exit_stack.enter_context(open('discord.json'))
+        discord_info = json.load(discord_info)
+
+        # Compute stats
+        lower, elo, upper = OpenBench.stats.Elo(test.results())
+        error   = max(upper - elo, elo - lower)
+        elo     = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
+        error   = OpenBench.templatetags.mytags.twoDigitPrecision(error)
+        h0      = OpenBench.templatetags.mytags.twoDigitPrecision(test.elolower)
+        h1      = OpenBench.templatetags.mytags.twoDigitPrecision(test.eloupper)
+        outcome = 'passed' if test.passed else 'failed'
+
+        # Compute mentions
+        def name_to_mention(name):
+            return f'<@{discord_info["ids"][name]}>'
+
+        mentions = set()
+
+        if test.author.lower() in discord_info['users']:
+            mentions.update(discord_info['users'][test.author.lower()])
+
+        if test.base_engine.lower() in discord_info['engines']:
+            mentions.update(discord_info['engines'][test.base_engine.lower()])
+
+        if test.dev_engine.lower() in discord_info['engines']:
+            mentions.update(discord_info['engines'][test.dev_engine.lower()])
+
+        mentions = sorted(list(mentions))
+        message  = "Congratulations! " + " ".join(name_to_mention(name) for name in mentions)
+
+        # Compute test metadata
+        tokens = test.dev_options.split(' ')
+        dev_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
+        ] + ["None"])[0]
+        dev_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
+        ] + ["None"])[0]
+
+        tokens = test.base_options.split(' ')
+        base_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
+        ] + ["None"])[0]
+        base_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
+        ] + ["None"])[0]
+
+        if test.test_mode == 'GAMES':
+            mode_string = f'{test.max_games} games'
+        else:
+            mode_string = f'SPRT [{h0}, {h1}]'
+
+        # Compute color
+        # Green if passing, red if failing.
+        color = 0xC6CE6F
+        if test.passed:
+            if test.test_mode == 'SPRT' and test.elolower + test.eloupper < 0:
+                color = 0x8CE3EC
+            else:
+                color = 0x76D58E
+        elif test.wins < test.losses:
+            color = 0xFFA590
+
+        payload = {
+            'content': message,
+            'embeds': [{
+                'author': { 'name': test.author },
+                'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
+                'url': request.build_absolute_uri(f'/test/{test_id}'),
+                'color': color,
+                'fields': [
+                    {
+                        'name': 'Dev Config',
+                        'value': f'{test.dev_time_control}s Threads={dev_threads} Hash={dev_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Base Config',
+                        'value': f'{test.base_time_control}s Threads={base_threads} Hash={base_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Mode',
+                        'value': mode_string,
+                    },
+                    {
+                        'name': 'Wins',
+                        'value': f'{test.wins}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Losses',
+                        'value': f'{test.losses}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Draws',
+                        'value': f'{test.draws}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Elo',
+                        'value': f'{elo} ± {error} (95%)',
+                    },
+                ] + test.use_penta * [{
+                    'name': 'Pentanomial (0-2)',
+                    'value': f'{test.LL}, {test.LD}, {test.DD}, {test.DW}, {test.WW}'
+                }],
+        }]}
+
+        return [
+            requests.post(webhook_url, json=payload)
+            for webhook_url in webhook_urls
+        ]
 
 def update_test(request, machine):
 
@@ -505,5 +628,9 @@ def update_test(request, machine):
     Machine.objects.filter(id=machine_id).update(
         updated=timezone.now()
     )
+
+    # Send update to webhook, if it exists
+    if test.finished and os.path.exists("webhooks") and os.path.exists("discord.json"):
+        notify_webhook(request, test_id)
 
     return [{}, { 'stop' : True }][test.finished]
