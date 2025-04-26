@@ -13,67 +13,125 @@
         "darkneutrino": "526824419247521793"
     },
     "users": {
-        "mid": [
-            "mid"
-        ],
-        "fury": [
-            "fury"
-        ],
-        "gabe": [
-            "gabe"
-        ],
-        "shawn": [
-            "shawn"
-        ],
-        "witek": [
-            "witek"
-        ],
-        "jochen": [
-            "jochen"
-        ],
-        "mergener": [
-            "mergener"
-        ],
-        "micpilar": [
-            "micpilar"
-        ],
-        "styxdoto": [
-            "styxdoto"
-        ],
-        "yoshie2000": [
-            "yoshie2000"
-        ],
-        "darkneutrino": [
-            "darkneutrino"
-        ]
+        "mid": {
+            "congrats": [
+                "mid"
+            ],
+            "notifies": []
+        },
+        "fury": {
+            "congrats": [
+                "fury"
+            ],
+            "notifies": []
+        },
+        "gabe": {
+            "congrats": [
+                "gabe"
+            ],
+            "notifies": []
+        },
+        "shawn": {
+            "congrats": [
+                "shawn"
+            ],
+            "notifies": [
+                "shawn"
+            ]
+        },
+        "jochen": {
+            "congrats": [
+                "jochen"
+            ],
+            "notifies": []
+        },
+        "mergener": {
+            "congrats": [
+                "mergener"
+            ],
+            "notifies": []
+        },
+        "micpilar": {
+            "congrats": [
+                "micpilar"
+            ],
+            "notifies": []
+        },
+        "styxdoto": {
+            "congrats": [
+                "styxdoto"
+            ],
+            "notifies": []
+        },
+        "yoshie2000": {
+            "congrats": [
+                "yoshie2000"
+            ],
+            "notifies": []
+        },
+        "darkneutrino": {
+            "congrats": [
+                "darkneutrino"
+            ],
+            "notifies": []
+        }
     },
     "engines": {
-        "serendipity": [
-            "shawn"
-        ],
-        "integral": [
-            "fury"
-        ],
-        "plentychess": [
-            "yoshie2000"
-        ],
-        "obsidian": [
-            "gabe"
-        ],
-        "spaghet": [
-            "mid"
-        ],
-        "quanticade": [
-            "darkneutrino"
-        ],
-        "schoenemann": [
-            "jochen"
-        ],
-        "caissa": [
-            "witek"
-        ],
-        "illumina": [
-            "mergener"
-        ]
+        "serendipity": {
+            "congrats": [
+                "shawn"
+            ],
+            "notifies": [
+                "shawn"
+            ]
+        },
+        "integral": {
+            "congrats": [
+                "fury"
+            ],
+            "notifies": []
+        },
+        "plentychess": {
+            "congrats": [
+                "yoshie2000"
+            ],
+            "notifies": []
+        },
+        "obsidian": {
+            "congrats": [
+                "gabe"
+            ],
+            "notifies": []
+        },
+        "spaghet": {
+            "congrats": [
+                "mid"
+            ],
+            "notifies": []
+        },
+        "quanticade": {
+            "congrats": [
+                "darkneutrino"
+            ],
+            "notifies": []
+        },
+        "schoenemann": {
+            "congrats": [
+                "jochen"
+            ],
+            "notifies": []
+        },
+        "caissa": {
+            "congrats": [
+                "witek"
+            ],
+            "notifies": []
+        },
+        "illumina": {
+            "congrats": [
+                "mergner"
+            ],
+            "notifies": []
+        }
     }
 }
