@@ -424,22 +424,28 @@ def notify_webhook(request, test_id):
         def name_to_mention(name):
             return f'<@{discord_info["ids"][name]}>'
 
-        mentions = set()
+        congrats = set()
+        notifies = set()
 
         if test.author.lower() in discord_info['users']:
-            mentions.update(discord_info['users'][test.author.lower()])
+            congrats.update(discord_info['users'][test.author.lower()]["congrats"])
+            notifies.update(discord_info['users'][test.author.lower()]["notifies"])
 
         if test.base_engine.lower() in discord_info['engines']:
-            mentions.update(discord_info['engines'][test.base_engine.lower()])
+            congrats.update(discord_info['engines'][test.base_engine.lower()]["congrats"])
+            notifies.update(discord_info['engines'][test.base_engine.lower()]["notifies"])
 
         if test.dev_engine.lower() in discord_info['engines']:
-            mentions.update(discord_info['engines'][test.dev_engine.lower()])
+            congrats.update(discord_info['engines'][test.dev_engine.lower()]["congrats"])
+            notifies.update(discord_info['engines'][test.dev_engine.lower()]["notifies"])
 
-        mentions = sorted(list(mentions))
-        message  = 'Congratulations!'
+        congrats = sorted(list(congrats.union(notifies)))
+        notifies = sorted(list(notifies))
 
         if test.passed:
-            message += ' ' + ' '.join(name_to_mention(name) for name in mentions)
+            message = 'Congratulations! ' + ' '.join(name_to_mention(name) for name in congrats)
+        else:
+            message = ' '.join(name_to_mention(name) for name in notifies)
 
         # Compute test metadata
         tokens = test.dev_options.split(' ')
