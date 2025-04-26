@@ -436,27 +436,27 @@ def notify_webhook(request, test_id):
             mentions.update(discord_info['engines'][test.dev_engine.lower()])
 
         mentions = sorted(list(mentions))
-        message  = "Congratulations!"
+        message  = 'Congratulations!'
 
         if test.passed:
-            message += " " + " ".join(name_to_mention(name) for name in mentions)
+            message += ' ' + ' '.join(name_to_mention(name) for name in mentions)
 
         # Compute test metadata
         tokens = test.dev_options.split(' ')
         dev_threads = ([
-            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
-        ] + ["None"])[0]
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Threads=')
+        ] + ['None'])[0]
         dev_hash = ([
-            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
-        ] + ["None"])[0]
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Hash')
+        ] + ['None'])[0]
 
         tokens = test.base_options.split(' ')
         base_threads = ([
-            opt.partition('=')[2] for opt in tokens if opt.startswith("Threads=")
-        ] + ["None"])[0]
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Threads=')
+        ] + ['None'])[0]
         base_hash = ([
-            opt.partition('=')[2] for opt in tokens if opt.startswith("Hash=")
-        ] + ["None"])[0]
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Hash=')
+        ] + ['None'])[0]
 
         if test.test_mode == 'GAMES':
             mode_string = f'{test.max_games} games'
@@ -464,15 +464,26 @@ def notify_webhook(request, test_id):
             mode_string = f'SPRT [{h0}, {h1}]'
 
         # Compute color
-        # Green if passing, red if failing.
-        color = 0xC6CE6F
+
+        # Passed tests
         if test.passed:
             if test.test_mode == 'SPRT' and test.elolower + test.eloupper < 0:
+                # Simplification
                 color = 0x8CE3EC
             else:
+                # Gainer
                 color = 0x76D58E
-        elif test.wins < test.losses:
+        elif test.wins >= test.losses:
+            # Fail yellow
+            color = 0xC6CE6F
+        else:
+            # Fail red
             color = 0xFFA590
+
+        # Fixed games test where 0 is within error bar is inconclusive
+        if test.test_mode == 'GAMES' and abs(elo) < error:
+            outcome = 'is inconclusive'
+            color = 0xCCCCCC
 
         payload = {
             'content': message,
