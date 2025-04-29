@@ -6,7 +6,7 @@
     "use_cross_approval"          : false,
     "require_login_to_view"       : false,
     "require_manual_registration" : false,
-    "balance_engine_throughputs"  : false,
+    "balance_engine_throughputs"  : true,
 
     "books" : [
         "2moves_v1.epd",
@@ -24,25 +24,21 @@
     ],
 
     "engines" : [
-        "4ku",
+        "Integral",
+        "PlentyChess",
+        "Obsidian",
+        "Elixir",
+        "Serendipity",
+        "Spaghet",
         "Berserk",
-        "Bit-Genie",
-        "BlackMarlin",
-        "Demolito",
-        "Drofa",
-        "Equisetum",
-        "Ethereal",
-        "FabChess",
-        "Halogen",
-        "Igel",
-        "Koivisto",
-        "Laser",
-        "RubiChess",
-        "Seer",
-        "Stash",
+        "Quanticade",
+        "Schoenemann",
+        "Caissa",
+        "Illumina",
         "Stockfish",
-        "Weiss",
-        "Winter",
-        "Zahak"
+        "Clarity",
+        "Anura",
+        "Clover",
+        "Stormphrax"
     ]
 }

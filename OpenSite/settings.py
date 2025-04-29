@@ -62,6 +62,11 @@ MIDDLEWARE = [
     'htmlmin.middleware.MarkRequestMiddleware',
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://furybench.com',
+    'https://chess.aronpetkovski.com'
+]
+
 ROOT_URLCONF = 'OpenSite.urls'
 
 TEMPLATES = [
@@ -89,8 +94,12 @@ WSGI_APPLICATION = 'OpenSite.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'openbench',
+        'USER': 'root',
+        'PASSWORD': '$KADEKumanovo2005',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
