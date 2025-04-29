@@ -1,11 +1,11 @@
 {
     "private" : false,
-    "nps"     : 1090000,
+    "nps"     : 2939311,
     "source"  : "https://github.com/TerjeKir/weiss",
 
     "build" : {
         "path"      : "src",
-        "compilers" : ["gcc"],
+        "compilers" : ["gcc", "clang"],
         "cpuflags"  : ["POPCNT"],
         "systems"   : ["Windows", "Linux"]
     },
@@ -14,47 +14,47 @@
 
         "default" : {
             "base_branch"     : "master",
-            "book_name"       : "UHO_Lichess_4852_v1.epd",
-            "test_bounds"     : "[0.00, 3.00]",
+            "book_name"       : "4moves_noob.epd",
+            "test_bounds"     : "[0.00, 5.00]",
             "test_confidence" : "[0.05, 0.05]",
             "win_adj"         : "movecount=3 score=400",
-            "draw_adj"        : "movenumber=32 movecount=8 score=10"
+            "draw_adj"        : "movenumber=40 movecount=8 score=10"
         },
 
         "STC" : {
-            "both_options"      : "Threads=1 Hash=32 Minimal=true",
+            "both_options"      : "Threads=1 Hash=32",
             "both_time_control" : "10.0+0.10",
             "workload_size"     : 32
         },
 
         "LTC" : {
-            "both_options"      : "Threads=1 Hash=128 Minimal=true",
+            "both_options"      : "Threads=1 Hash=128",
             "both_time_control" : "60.0+0.6",
             "workload_size"     : 8
         },
 
         "STC Simplify" : {
-            "both_options"      : "Threads=1 Hash=32 Minimal=true",
+            "both_options"      : "Threads=1 Hash=32",
             "both_time_control" : "10.0+0.10",
             "workload_size"     : 32,
             "test_bounds"       : "[-3.00, 0.00]"
         },
 
         "LTC Simplify" : {
-            "both_options"      : "Threads=1 Hash=128 Minimal=true",
+            "both_options"      : "Threads=1 Hash=128",
             "both_time_control" : "60.0+0.6",
             "workload_size"     : 8,
             "test_bounds"       : "[-3.00, 0.00]"
         },
 
         "SMP STC" : {
-            "both_options"      : "Threads=8 Hash=128 Minimal=true",
+            "both_options"      : "Threads=8 Hash=64",
             "both_time_control" : "5.0+0.05",
             "workload_size"     : 64
         },
 
         "SMP LTC" : {
-            "both_options"      : "Threads=8 Hash=512 Minimal=true",
+            "both_options"      : "Threads=8 Hash=256",
             "both_time_control" : "20.0+0.2",
             "workload_size"     : 16
         }
@@ -63,18 +63,18 @@
     "tune_presets" : {
 
         "default" : {
-            "book_name" : "UHO_4060_v2.epd",
+            "book_name" : "4moves_noob.epd",
             "win_adj"   : "movecount=3 score=400",
             "draw_adj"  : "movenumber=32 movecount=8 score=10"
         },
 
         "STC" : {
-            "dev_options"      : "Threads=1 Hash=32 Minimal=true",
+            "dev_options"      : "Threads=1 Hash=32",
             "dev_time_control" : "10.0+0.10"
         },
 
         "LTC" : {
-            "dev_options"      : "Threads=1 Hash=128 Minimal=true",
+            "dev_options"      : "Threads=1 Hash=128",
             "dev_time_control" : "60.0+0.6"
         }
     },
@@ -88,8 +88,9 @@
         },
 
         "40k Nodes" : {
-            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_options"      : "Threads=1 Hash=16",
             "both_time_control" : "N=40000"
         }
     }
 }
+
