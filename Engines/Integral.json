@@ -1,6 +1,6 @@
 {
   "private" : false,
-  "nps": 480000,
+  "nps": 1300000,
   "source"  : "https://github.com/aronpetko/Integral",
 
   "build" : {
@@ -21,7 +21,7 @@
     },
     "STC": {
       "both_options": "Threads=1 Hash=16 Minimal=true",
-      "both_time_control": "8.0+0.08",
+      "both_time_control": "10.0+0.10",
       "workload_size": 32
     },
     "LTC": {
@@ -31,7 +31,7 @@
     },
     "Simplification STC": {
       "both_options": "Threads=1 Hash=16 Minimal=true",
-      "both_time_control": "8.0+0.08",
+      "both_time_control": "10.0+0.10",
       "test_bounds": "[-3.00, 1.00]",
       "workload_size": 32
     },
@@ -52,7 +52,7 @@
 
     "STC" : {
       "dev_options"      : "Threads=1 Hash=16 Minimal=true",
-      "dev_time_control" : "8.00+0.08"
+      "dev_time_control" : "10.00+0.10"
     },
 
     "LTC" : {
