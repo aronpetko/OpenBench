@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 600000,
+    "nps"     : 450000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
@@ -63,7 +63,7 @@
     "tune_presets" : {
 
         "default" : {
-            "book_name" : "Pohl.epd",
+            "book_name" : "UHO_Lichess_4852_v1.epd",
             "win_adj"   : "movecount=3 score=400",
             "draw_adj"  : "movenumber=40 movecount=8 score=10"
         }
