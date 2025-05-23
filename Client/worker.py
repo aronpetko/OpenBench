@@ -57,7 +57,7 @@ from client import try_forever
 
 ## Basic configuration of the Client. These timeouts can be changed at will
 
-CLIENT_VERSION   = 37 # Client version to send to the Server
+CLIENT_VERSION   = 38 # Client version to send to the Server
 TIMEOUT_HTTP     = 30 # Timeout in seconds for HTTP requests
 TIMEOUT_ERROR    = 10 # Timeout in seconds when any errors are thrown
 TIMEOUT_WORKLOAD = 30 # Timeout in seconds between workload requests
@@ -213,13 +213,6 @@ class Configuration:
         # Report the results of our search, including any "missing flags
         print ('Found   |', ' '.join(self.cpu_flags))
         print ('Missing |', ' '.join([x for x in desired if x not in actual]))
-
-    def scan_for_machine_id(self):
-
-        if os.path.isfile('machine.txt'):
-            with open('machine.txt') as fin:
-                for line in fin.readlines():
-                    self.machine_id = line.rstrip(); break
 
 class ServerReporter:
 
@@ -899,7 +892,7 @@ def server_configure_worker(config):
     config.scan_for_compilers(data)      # Public engine build tools
     config.scan_for_private_tokens(data) # Private engine access tokens
     config.scan_for_cpu_flags(data)      # For executing binaries
-    config.scan_for_machine_id()         # None, or the content of machine.txt
+    config.machine_id = None             # None, until registration occurs for a session
 
     system_info = {
         'compilers'      : config.compilers,      # Key: Engine, Value: (Compiler, Version)
@@ -940,10 +933,6 @@ def server_configure_worker(config):
     # The 'error' header is included if there was an issue
     if 'error' in response:
         raise utils.OpenBenchFatalWorkerException(response['error'])
-
-    # Save the machine id, to avoid re-registering every time
-    with open('machine.txt', 'w') as fout:
-        fout.write(str(response['machine_id']))
 
     # Store machine_id, and the secret for this session
     config.machine_id   = response['machine_id']
