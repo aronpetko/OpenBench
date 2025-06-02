@@ -10,7 +10,8 @@
         "micpilar": "1028207488547434517",
         "styxdoto": "457017004373704705",
         "yoshie2000": "415167192296849409",
-        "darkneutrino": "526824419247521793"
+        "darkneutrino": "526824419247521793",
+        "vast": "798226007127359495"
     },
     "users": {
         "mid": {
@@ -74,6 +75,14 @@
                 "darkneutrino"
             ],
             "notifies": []
+        },
+        "vast": {
+            "congrats": [
+                "vast"
+            ],
+            "notifies": [
+                "vast"
+            ]
         }
     },
     "engines": {
@@ -132,6 +141,22 @@
                 "mergner"
             ],
             "notifies": []
+        },
+        "clarity": {
+            "congrats": [
+                "vast"
+            ],
+            "notifies": [
+                "vast"
+            ]
+        },
+        "anura": {
+            "congrats": [
+                "vast"
+            ],
+            "notifies": [
+                "vast"
+            ]
         }
     }
 }
