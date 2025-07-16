@@ -1,0 +1,72 @@
+{
+    "private": false,
+    "nps": 1100000,
+    "source": "https://github.com/h1me01/Astra",
+    "build": {
+        "path": "src",
+        "compilers": [
+            "g++"
+        ],
+        "cpuflags": [],
+        "systems": [
+            "Linux",
+            "Windows"
+        ]
+    },
+    "test_presets": {
+        "default": {
+            "base_branch": "master",
+            "book_name": "UHO_Lichess_4852_v1.epd",
+            "test_bounds": "[0.00, 2.00]",
+            "test_confidence": "[0.1, 0.05]",
+            "win_adj": "movecount=3 score=400",
+            "draw_adj": "movenumber=40 movecount=8 score=10"
+        },
+        "STC": {
+            "both_options": "Threads=1 Hash=16",
+            "both_time_control": "8.0+0.08",
+            "workload_size": 32
+        },
+        "MTC": {
+            "both_options": "Threads=1 Hash=64",
+            "both_time_control": "40.0+0.4",
+            "workload_size": 8
+        },
+        "LTC": {
+            "both_options": "Threads=1 Hash=128",
+            "both_time_control": "60.0+0.6",
+            "workload_size": 8
+        }
+    },
+    "tune_presets": {
+        "default": {
+            "book_name": "UHO_Lichess_4852_v1.epd",
+            "win_adj": "movecount=3 score=400",
+            "draw_adj": "movenumber=40 movecount=8 score=10",
+            "spsa_iterations": 25000
+        },
+        "STC": {
+            "dev_options": "Threads=1 Hash=16",
+            "dev_time_control": "8.0+0.08"
+        },
+        "MTC": {
+            "dev_options": "Threads=1 Hash=32",
+            "dev_time_control": "40.0+0.40"
+        },
+        "LTC": {
+            "dev_options": "Threads=1 Hash=64",
+            "dev_time_control": "60.0+0.60"
+        }
+    },
+    "datagen_presets": {
+        "default": {
+            "win_adj": "None",
+            "draw_adj": "None",
+            "workload_size": 128
+        },
+        "40k Nodes": {
+            "both_options": "Threads=1 Hash=16",
+            "both_time_control": "N=40000"
+        }
+    }
+}
