@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 450000,
+    "nps"     : 800000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
@@ -31,6 +31,12 @@
             "both_options"      : "Threads=1 Hash=128 Minimal=true",
             "both_time_control" : "40.0+0.4",
             "workload_size"     : 8
+        },
+
+        "VSTC" : {
+            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_time_control" : "4.0+0.04",
+            "workload_size"     : 32
         },
 
         "STC regression" : {
