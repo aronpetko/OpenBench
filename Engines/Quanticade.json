@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 800000,
+    "nps"     : 1080000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
