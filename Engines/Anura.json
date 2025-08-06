@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 400000,
+    "nps"     : 200000,
     "source"  : "https://github.com/Vast342/Anura",
 
     "build" : {
@@ -14,14 +14,14 @@
         "default" : {
             "base_branch"     : "main",
             "book_name"       : "UHO_Lichess_4852_v1.epd",
-            "test_bounds"     : "[0.00, 10.00]",
+            "test_bounds"     : "[0.00, 5.00]",
             "test_confidence" : "[0.10, 0.05]",
             "win_adj"         : "movecount=3 score=400",
             "draw_adj"        : "movenumber=40 movecount=8 score=10"
         },
         "Eval" : {
             "both_options"      : "Threads=1 Hash=1",
-            "both_time_control" : "N=20000",
+            "both_time_control" : "N=10000",
             "workload_size"     : 256
         },
         "STC" : {
@@ -38,13 +38,13 @@
             "both_options"      : "Threads=1 Hash=32",
             "both_time_control" : "8.0+0.08",
             "workload_size"     : 32,
-            "test_bounds"       : "[-10.00, 3.00]"
+            "test_bounds"       : "[-5.00, 0.00]"
         },
         "LTC regression" : {
             "both_options"      : "Threads=1 Hash=128",
             "both_time_control" : "40.0+0.4",
             "workload_size"     : 8,
-            "test_bounds"       : "[-10.00, 3.00]"
+            "test_bounds"       : "[-5.00, 0.00]"
         }
     },
 
@@ -57,16 +57,14 @@
     },
 
     "datagen_presets" : {
-
         "default" : {
-            "win_adj"       : "None",
-            "draw_adj"      : "None",
-            "workload_size" : 128
+            "win_adj": "None",
+            "draw_adj": "None",
+            "workload_size": 256,
+            "both_options": "Threads=1 Hash=16",
+            "both_time_control": "N=1000",
+            "datagen_max_games": "10000000",
+            "both_branch": "datagen"
         },
-
-        "40k Nodes" : {
-            "both_options"      : "Threads=1 Hash=1",
-            "both_time_control" : "N=40000"
-        }
     }
 }
