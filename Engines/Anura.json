@@ -65,6 +65,6 @@
             "both_time_control": "N=1000",
             "datagen_max_games": "10000000",
             "both_branch": "datagen"
-        },
+        }
     }
 }
