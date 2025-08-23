@@ -74,7 +74,7 @@
 
   "datagen_presets" : {
     "default" : {
-      "syzygy_adj"    : "None",
+      "syzygy_adj"    : "Disabled",
       "win_adj"       : "None",
       "draw_adj"      : "None",
       "workload_size" : 1024
