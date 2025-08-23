@@ -74,14 +74,15 @@
 
   "datagen_presets" : {
     "default" : {
+      "syzygy_adj"    : "None",
       "win_adj"       : "None",
       "draw_adj"      : "None",
-      "workload_size" : 128
+      "workload_size" : 1024
     },
 
-    "40k Nodes" : {
-      "both_options"      : "Threads=1 Hash=16",
-      "both_time_control" : "N=40000"
+    "1k Nodes" : {
+      "both_options"      : "Threads=1 Hash=16 Minimal=true",
+      "both_time_control" : "N=1000"
     }
   }
 }
