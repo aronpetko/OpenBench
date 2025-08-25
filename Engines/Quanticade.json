@@ -15,7 +15,7 @@
         "default" : {
             "base_branch"     : "master",
             "book_name"       : "UHO_Lichess_4852_v1.epd",
-            "test_bounds"     : "[0.00, 3.00]",
+            "test_bounds"     : "[0.00, 2.50]",
             "test_confidence" : "[0.1, 0.05]",
             "win_adj"         : "movecount=3 score=400",
             "draw_adj"        : "movenumber=40 movecount=8 score=10"
@@ -23,13 +23,13 @@
 
         "STC" : {
             "both_options"      : "Threads=1 Hash=16 Minimal=true",
-            "both_time_control" : "8.0+0.08",
+            "both_time_control" : "10.0+0.10",
             "workload_size"     : 32
         },
 
         "LTC" : {
             "both_options"      : "Threads=1 Hash=128 Minimal=true",
-            "both_time_control" : "40.0+0.4",
+            "both_time_control" : "60.0+0.6",
             "workload_size"     : 8
         },
 
@@ -41,14 +41,14 @@
 
         "STC regression" : {
             "both_options"      : "Threads=1 Hash=16 Minimal=true",
-            "both_time_control" : "8.0+0.08",
+            "both_time_control" : "10.0+0.10",
             "workload_size"     : 32,
             "test_bounds"       : "[-3.00, 1.00]"
         },
 
         "LTC regression" : {
             "both_options"      : "Threads=1 Hash=128 Minimal=true",
-            "both_time_control" : "40.0+0.4",
+            "both_time_control" : "60.0+0.6",
             "workload_size"     : 8,
             "test_bounds"       : "[-3.00, 1.00]"
         },
