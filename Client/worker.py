@@ -1034,6 +1034,7 @@ def complete_workload(config):
             compact    = config.workload['test']['upload_pgns'] == 'COMPACT'
             pgn_files  = [Cutechess.pgn_name(config, timestamp, x) for x in range(cutechess_cnt)]
             ServerReporter.report_pgn(config, pgn_util.compress_list_of_pgns(pgn_files, scale_factor, compact))
+            pgn_util.delete_list_of_pgns(pgn_files)
 
 def safe_download_network_weights(config, branch):
 
