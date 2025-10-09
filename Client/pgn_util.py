@@ -21,6 +21,7 @@
 import bz2
 import re
 import sys
+import os
 
 ## Local imports must only use "import x", never "from x import ..."
 
@@ -103,3 +104,7 @@ def compress_list_of_pgns(file_names, scale_factor, compact):
         text += strip_entire_pgn(fname, scale_factor, compact)
 
     return bz2.compress(text.encode())
+
+def delete_list_of_pgns(file_names):
+    for fname in file_names:
+        os.remove(fname)
