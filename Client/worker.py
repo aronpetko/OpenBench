@@ -57,7 +57,7 @@ from client import try_forever
 
 ## Basic configuration of the Client. These timeouts can be changed at will
 
-CLIENT_VERSION   = 38 # Client version to send to the Server
+CLIENT_VERSION   = 39 # Client version to send to the Server
 TIMEOUT_HTTP     = 30 # Timeout in seconds for HTTP requests
 TIMEOUT_ERROR    = 10 # Timeout in seconds when any errors are thrown
 TIMEOUT_WORKLOAD = 30 # Timeout in seconds between workload requests
@@ -1034,6 +1034,7 @@ def complete_workload(config):
             compact    = config.workload['test']['upload_pgns'] == 'COMPACT'
             pgn_files  = [Cutechess.pgn_name(config, timestamp, x) for x in range(cutechess_cnt)]
             ServerReporter.report_pgn(config, pgn_util.compress_list_of_pgns(pgn_files, scale_factor, compact))
+            pgn_util.delete_list_of_pgns(pgn_files)
 
 def safe_download_network_weights(config, branch):
 
