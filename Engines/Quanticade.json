@@ -88,7 +88,7 @@
         "5k Nodes" : {
             "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
             "both_time_control" : "N=5000"
-        }
+        },
 
         "20k Nodes" : {
             "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
