@@ -1,12 +1,12 @@
 {
     "private" : false,
-    "nps"     : 1080000,
+    "nps"     : 650000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
         "path"      : "",
         "compilers" : ["gcc"],
-        "cpuflags"  : ["AVX2"],
+        "cpuflags"  : [""],
         "systems"   : ["Linux"]
     },
 
@@ -43,14 +43,16 @@
             "both_options"      : "Threads=1 Hash=16 Minimal=true",
             "both_time_control" : "10.0+0.10",
             "workload_size"     : 32,
-            "test_bounds"       : "[-3.00, 1.00]"
+            "test_bounds"       : "[-2.00, 0.00]",
+            "test_confidence"   : "[0.05, 0.05]"
         },
 
         "LTC regression" : {
             "both_options"      : "Threads=1 Hash=128 Minimal=true",
             "both_time_control" : "60.0+0.6",
             "workload_size"     : 8,
-            "test_bounds"       : "[-3.00, 1.00]"
+            "test_bounds"       : "[-2.00, 0.00]",
+            "test_confidence"   : "[0.05, 0.05]"
         },
 
         "SMP STC" : {
@@ -83,9 +85,14 @@
             "workload_size" : 128
         },
 
-        "40k Nodes" : {
-            "both_options"      : "Threads=1 Hash=16",
-            "both_time_control" : "N=40000"
+        "5k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
+            "both_time_control" : "N=5000"
+        }
+
+        "20k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
+            "both_time_control" : "N=20000"
         }
     }
 }
