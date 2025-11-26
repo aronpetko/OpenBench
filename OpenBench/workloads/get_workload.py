@@ -354,8 +354,9 @@ def game_distribution(test, machine):
         worker_threads = worker_threads // 2
 
     # Ignore sockets for concurrent cutechess, when playing with more than one thread
-    if max(dev_threads, base_threads) > 1:
-        worker_sockets = 1
+    num_threads = max(dev_threads, base_threads)
+    if num_threads > 1:
+        worker_sockets = max(worker_sockets // num_threads, 1)
 
     # Max possible concurrent engine games, per copy of cutechess
     max_concurrency = (worker_threads // worker_sockets) // max(dev_threads, base_threads)
