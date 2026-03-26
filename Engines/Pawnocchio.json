@@ -12,7 +12,7 @@
 
     "test_presets": {
         "default": {
-            "base_branch": "master",
+            "base_branch": "dev",
             "book_name": "UHO_Lichess_4852_v1.epd",
             "test_bounds": "[0.00, 3.00]",
             "test_confidence": "[0.1, 0.05]",
@@ -21,41 +21,41 @@
         },
 
         "STC": {
-            "both_options": "Threads=1 Hash=16",
+            "both_options": "Threads=1 Hash=16 Minimal=true",
             "both_time_control": "10+0.1",
             "workload_size": 32
         },
 
         "LTC": {
-            "both_options": "Threads=1 Hash=128",
+            "both_options": "Threads=1 Hash=64 Minimal=true",
             "both_time_control": "40+0.4",
             "workload_size": 8
         },
 
         "STC regression": {
-            "both_options": "Threads=1 Hash=16",
+            "both_options": "Threads=1 Hash=16 Minimal=true",
             "both_time_control": "10+0.1",
             "workload_size": 32,
-            "test_bounds": "[-3.00, 1.00]"
+            "test_bounds": "[-3.00, 0.00]"
         },
 
         "LTC regression": {
-            "both_options": "Threads=1 Hash=128",
+            "both_options": "Threads=1 Hash=64 Minimal=true",
             "both_time_control": "40+0.4",
             "workload_size": 8,
-            "test_bounds": "[-3.00, 1.00]"
+            "test_bounds": "[-3.00, 0.00]"
         },
 
         "STC [4T]": {
-            "both_options": "Threads=4 Hash=64",
+            "both_options": "Threads=4 Hash=64 Minimal=true",
             "both_time_control": "10+0.1",
-            "workload_size": 32
+            "workload_size": 8
         },
 
         "LTC [4T]": {
-            "both_options": "Threads=4 Hash=512",
+            "both_options": "Threads=4 Hash=256 Minimal=true",
             "both_time_control": "40+0.4",
-            "workload_size": 8
+            "workload_size": 4
         },
     },
 
@@ -67,23 +67,29 @@
         },
 
         "STC": {
-            "dev_options": "Threads=1 Hash=16",
+            "dev_options": "Threads=1 Hash=16 Minimal=true",
             "dev_time_control": "10+0.1"
         },
 
         "MTC": {
-            "dev_options": "Threads=1 Hash=32",
+            "dev_options": "Threads=1 Hash=32 Minimal=true",
             "dev_time_control": "20+0.2"
         },
 
         "LTC": {
-            "dev_options": "Threads=1 Hash=64",
+            "dev_options": "Threads=1 Hash=64 Minimal=true",
             "dev_time_control": "40+0.0.4"
         },
 
         "VLTC": {
-            "dev_options": "Threads=1 Hash=128",
+            "dev_options": "Threads=1 Hash=128 Minimal=true",
             "dev_time_control": "80+0.8"
+        },
+
+        
+        "LTC [4T]": {
+            "dev_options": "Threads=4 Hash=256 Minimal=true",
+            "dev_time_control": "40+0.0.4"
         },
     },
 
