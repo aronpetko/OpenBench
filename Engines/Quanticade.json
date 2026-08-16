@@ -1,0 +1,99 @@
+{
+    "private" : false,
+    "nps"     : 850000,
+    "source"  : "https://github.com/Quanticade/Quanticade",
+
+    "build" : {
+        "path"      : "",
+        "compilers" : ["gcc"],
+        "cpuflags"  : [],
+        "systems"   : ["Linux"]
+    },
+
+    "test_presets" : {
+
+        "default" : {
+            "base_branch"     : "master",
+            "book_name"       : "UHO_Lichess_4852_v1.epd",
+            "test_bounds"     : "[0.00, 3.0]",
+            "test_confidence" : "[0.1, 0.05]",
+            "win_adj"         : "movecount=3 score=400",
+            "draw_adj"        : "movenumber=40 movecount=8 score=10"
+        },
+
+        "STC" : {
+            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_time_control" : "10.0+0.10",
+            "workload_size"     : 32
+        },
+
+        "LTC" : {
+            "both_options"      : "Threads=1 Hash=128 Minimal=true",
+            "both_time_control" : "60.0+0.6",
+            "workload_size"     : 8
+        },
+
+        "VSTC" : {
+            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_time_control" : "4.0+0.04",
+            "workload_size"     : 32
+        },
+
+        "STC regression" : {
+            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_time_control" : "10.0+0.10",
+            "workload_size"     : 32,
+            "test_bounds"       : "[-3.00, 1.00]",
+            "test_confidence"   : "[0.05, 0.05]"
+        },
+
+        "LTC regression" : {
+            "both_options"      : "Threads=1 Hash=128 Minimal=true",
+            "both_time_control" : "60.0+0.6",
+            "workload_size"     : 8,
+            "test_bounds"       : "[-3.00, 1.00]",
+            "test_confidence"   : "[0.05, 0.05]"
+        },
+
+        "SMP STC" : {
+            "both_options"      : "Threads=8 Hash=16 Minimal=true",
+            "both_time_control" : "4.0+0.04",
+            "workload_size"     : 64
+        },
+
+        "SMP LTC" : {
+            "both_options"      : "Threads=8 Hash=256 Minimal=true",
+            "both_time_control" : "16.0+0.16",
+            "workload_size"     : 16
+        }
+    },
+
+    "tune_presets" : {
+
+        "default" : {
+            "book_name" : "UHO_Lichess_4852_v1.epd",
+            "win_adj"   : "movecount=3 score=400",
+            "draw_adj"  : "movenumber=40 movecount=8 score=10"
+        }
+    },
+
+    "datagen_presets" : {
+
+        "default" : {
+            "book_name"     : "UHO_Lichess_4852_v1.epd",
+            "win_adj"       : "movecount=5 score=2000",
+            "draw_adj"      : "movenumber=32 movecount=6 score=10",
+            "workload_size" : 128
+        },
+
+        "5k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 DisableNormalization=true SoftNodes=true Minimal=true",
+            "both_time_control" : "N=5000"
+        },
+
+        "25k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 DisableNormalization=true SoftNodes=true Minimal=true",
+            "both_time_control" : "N=25000"
+        }
+    }
+}
