@@ -10,6 +10,12 @@
     <script src="{% static 'workload_utils.js' %}?{{ static_version }}"></script>
 
     <script>
+        setTimeout(function() {
+            location.reload();
+        }, 60000); 
+    </script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetch_summary({{workload.id}});
         });
@@ -129,6 +135,9 @@
         {% if type == "TEST" or type == "DATAGEN" %}
             <div class="anchor-container">
                 <a class="mt-1 anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true)">Copy Stat Block</a>
+            </div>
+            <div class="anchor-container">
+                <a class="mt-1 anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true, true)">Copy Stat Block (Code Blocked)</a>
             </div>
         {% endif %}
 
