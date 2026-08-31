@@ -12,6 +12,20 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
+def secret(name):
+
+    # Secrets live in /etc/openbench/openbench.env, loaded by openbench.service
+    # via EnvironmentFile=. Nothing secret belongs in this file: it is committed,
+    # and the repository is public. Fail loudly rather than fall back to a
+    # default, so a missing value can never silently become a shared one.
+
+    if not (value := os.environ.get(name)):
+        raise ImproperlyConfigured('%s is not set; see /etc/openbench/openbench.env' % (name))
+
+    return value
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -19,7 +33,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = '@!zw2l8til1(0eb_nk+1w!(n78gqm&u)s)_v7#k6iseia@g9q0'
+SECRET_KEY = secret('OPENBENCH_SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
@@ -97,7 +111,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'openbench',
         'USER': 'root',
-        'PASSWORD': '***REMOVED-CREDENTIAL***',
+        'PASSWORD': secret('OPENBENCH_DB_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '3306',
     }

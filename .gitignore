@@ -38,3 +38,5 @@ pip-selfcheck.json
 db.json
 
 webhooks
+
+backup.json
