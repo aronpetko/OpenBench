@@ -5,6 +5,7 @@
     {% load static %}
 
     <head>
+        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}?{{ static_version }}">
@@ -15,10 +16,20 @@
 
         <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' rel='stylesheet'>
 
-        <link rel="preconnect" href="https://fonts.gstatic.com">
-        <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
 
-        <title>FuryBench</title>
+        <title>{% block title %}FuryBench{% endblock %}</title>
+
+        <script>
+            // Applied before first paint, so a collapsed sidebar does not
+            // flash open on every navigation
+            try {
+                if (localStorage.getItem('sidebar-collapsed') === '1')
+                    document.documentElement.classList.add('sidebar-collapsed');
+            } catch (error) { }
+        </script>
 
         {% block scripts %}
         {% endblock %}
@@ -81,10 +92,48 @@
                     });
                 }
 
+                {
+                    // Mark the sidebar entry matching the current page, so it
+                    // is obvious where you are without reading every label
+
+                    const path  = window.location.pathname.replace(/\/+$/, '') || '/';
+                    const links = document.querySelectorAll('#sidebar li a[href^="/"]');
+
+                    let best = null, best_length = 0;
+
+                    links.forEach(link => {
+                        const href = link.getAttribute('href').replace(/\/+$/, '') || '/';
+                        const hit  = path === href || path.startsWith(href + '/');
+                        if (hit && href.length >= best_length) {
+                            best = link; best_length = href.length;
+                        }
+                    });
+
+                    if (best) best.classList.add('active');
+                }
+
             }, false);
+
+            document.addEventListener('submit', event => {
+
+                // Prevent duplicate <form> submissions
+                const form = event.target;
+                if (form.dataset.submitting) {
+                    event.preventDefault();
+                    return;
+                }
+
+                form.dataset.submitting = true;
+            }, true);
 
             function toggle_sidebar() {
                 document.body.classList.toggle('sidebar-open')
+            }
+
+            function toggle_sidebar_collapsed() {
+                const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+                try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0'); }
+                catch (error) { /* private browsing; the toggle still works for this page */ }
             }
         </script>
     </head>
@@ -93,72 +142,87 @@
 
         <div id="sidebar">
 
+            <div class="brand">
+                <a class="brand-link" href="/">
+                    <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                    <span class="brand-text">
+                        <span class="brand-name">FuryBench</span>
+                        <span class="brand-sub">Testing Framework</span>
+                    </span>
+                </a>
+                <button id="sidebar-collapse" onclick="toggle_sidebar_collapsed()"
+                        title="Collapse sidebar" aria-label="Collapse sidebar">
+                    <i class="fa-solid fa-angles-left fa-fw"></i>
+                </button>
+            </div>
+
             <ul>
                 <li class="header">Admin</li>
                 {% if user.is_authenticated %}
-                    <li><a href="/logout/"><i class="fa-solid fa-right-from-bracket fa-fw"></i> Logout</a></li>
-                    <li><a href="/profile/"><i class="fa-solid fa-user fa-fw"></i> Profile</a></li>
+                    <li><a title="Logout" href="/logout/"><i class="fa-solid fa-right-from-bracket fa-fw"></i><span class="nav-label">Logout</span></a></li>
+                    <li><a title="Profile" href="/profile/"><i class="fa-solid fa-user fa-fw"></i><span class="nav-label">Profile</span></a></li>
                 {% else %}
-                    <li><a href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i> Login</a></li>
-                    <li><a href="/register"><i class="fa-solid fa-registered fa-fw"></i> Register</a></li>
+                    <li><a title="Login" href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i><span class="nav-label">Login</span></a></li>
+                    <li><a title="Register" href="/register"><i class="fa-solid fa-registered fa-fw"></i><span class="nav-label">Register</span></a></li>
                 {% endif %}
             </ul>
 
-            <hr>
-
             <ul>
                 <li class="header">Tests</li>
-                <li><a href="/index"><i class="fa-solid fa-house fa-fw"></i> Index</a></li>
-                <li><a href="/greens"><i class="fa-solid fa-heart fa-fw"></i> Greens</a></li>
-                <li><a href="/search"><i class="fa-solid fa-magnifying-glass fa-fw"></i> Search</a></li>
+                <li><a title="Index" href="/index"><i class="fa-solid fa-house fa-fw"></i><span class="nav-label">Index</span></a></li>
+                <li><a title="Greens" href="/greens"><i class="fa-solid fa-heart fa-fw"></i><span class="nav-label">Greens</span></a></li>
+                <li><a title="Search" href="/search"><i class="fa-solid fa-magnifying-glass fa-fw"></i><span class="nav-label">Search</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Actions</li>
-                <li><a href="/test/new/"><i class="fa-solid fa-plus fa-fw"></i> Create Test</a></li>
-                <li><a href="/tune/new/"><i class="fa-solid fa-vial fa-fw"></i> Create Tune</a></li>
-                <li><a href="/datagen/new/"><i class="fa-solid fa-database fa-fw"></i> Create Datagen</a></li>
-                <li><a href="/newNetwork"><i class="fa-solid fa-upload fa-fw"></i> Upload Net</a></li>
+                <li><a title="Create Test" href="/test/new/"><i class="fa-solid fa-plus fa-fw"></i><span class="nav-label">Create Test</span></a></li>
+                <li><a title="Create Tune" href="/tune/new/"><i class="fa-solid fa-vial fa-fw"></i><span class="nav-label">Create Tune</span></a></li>
+                <li><a title="Create Datagen" href="/datagen/new/"><i class="fa-solid fa-database fa-fw"></i><span class="nav-label">Create Datagen</span></a></li>
+                <li><a title="Upload Net" href="/newNetwork"><i class="fa-solid fa-upload fa-fw"></i><span class="nav-label">Upload Net</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Info</li>
-                <li><a href="/users"><i class="fa-solid fa-users fa-fw"></i> Users</a></li>
-                <li><a href="/events"><i class="fa-solid fa-circle-exclamation fa-fw"></i> Events</a></li>
-                <li><a href="/errors"><i class="fa-solid fa-exclamation-triangle fa-fw"></i> Errors</a></li>
-                <li><a href="/machines"><i class="fa-solid fa-microchip fa-fw"></i> Machines</a></li>
-                <li><a href="/networks"><i class="fa-solid fa-circle-nodes fa-fw"></i> Networks</a></li>
+                <li><a title="Users" href="/users"><i class="fa-solid fa-users fa-fw"></i><span class="nav-label">Users</span></a></li>
+                <li><a title="Events" href="/events"><i class="fa-solid fa-circle-exclamation fa-fw"></i><span class="nav-label">Events</span></a></li>
+                <li><a title="Errors" href="/errors"><i class="fa-solid fa-exclamation-triangle fa-fw"></i><span class="nav-label">Errors</span></a></li>
+                <li><a title="Machines" href="/machines"><i class="fa-solid fa-microchip fa-fw"></i><span class="nav-label">Machines</span></a></li>
+                <li><a title="Networks" href="/networks"><i class="fa-solid fa-circle-nodes fa-fw"></i><span class="nav-label">Networks</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Support</li>
-                <li><a href="{{config.client_repo_url}}"><i class="fa-brands fa-github fa-fw"></i> OpenBench</a></li>
-                <li><a href="https://discord.gg/9MVg7fBTpM"><i class="fa-brands fa-discord fa-fw"></i> Discord</a></li>
+                <li><a title="OpenBench" href="{{config.client_repo_url}}"><i class="fa-brands fa-github fa-fw"></i><span class="nav-label">OpenBench</span></a></li>
+                <li><a title="Discord" href="https://discord.gg/9MVg7fBTpM"><i class="fa-brands fa-discord fa-fw"></i><span class="nav-label">Discord</span></a></li>
             </ul>
 
-            <hr>
-
+            <!-- Engines developed here, split from the ones we only ever
+                 test against. home_engines is the same list the ticker uses. -->
             <ul>
-                <li class="header">Engines</li>
+                <li class="header">Our Engines</li>
                 {% for engine, data in config.engines.items %}
-                    <li><a href="{{data.source}}">{{engine}}</a></li>
+                    {% if engine in config.home_engines %}
+                        <li><a title="{{engine}}" href="{{data.source}}"><i class="fa-solid fa-chess-knight fa-fw"></i><span class="nav-label">{{engine}}</span></a></li>
+                    {% endif %}
                 {% endfor %}
             </ul>
 
-            <hr>
+            <ul>
+                <li class="header">External Engines</li>
+                {% for engine, data in config.engines.items %}
+                    {% if engine not in config.home_engines %}
+                        <li><a title="{{engine}}" href="{{data.source}}"><i class="fa-solid fa-chess-pawn fa-fw"></i><span class="nav-label">{{engine}}</span></a></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
 
         </div>
 
         <div id="content-parent">
             <div id="content" class="pb-5">
                 <div id="content-header">
-                    <button id="sidebar-toggle" onclick="toggle_sidebar()">
+                    <button id="sidebar-toggle" onclick="toggle_sidebar()" aria-label="Toggle navigation">
                         <i class="fa-solid fa-bars fa-fw"></i>
                     </button>
                     <h2>
@@ -166,9 +230,16 @@
                     </h2>
                 </div>
 
-                <h5 style="color: #DBDEE1; font-weight: normal; overflow-x: auto">
-                    Home to Integral, PlentyChess, Obsidian, Caissa, Quanticade, Serendipity, Spaghet, Schoenemann, Clarity, and Illumina
-                </h5>
+                <!-- The engines developed here. Deliberately not
+                     config.engines: that list also carries engines we only
+                     ever test against. -->
+                {% if config.home_engines %}
+                <div class="engine-line">
+                    <span class="engine-line-label">home to</span>
+                    {% for engine in config.home_engines %}<span class="engine-line-item">{{engine}}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
                 {% if request.session.error_message %}
                     <div class="error-message">

@@ -18,14 +18,17 @@
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+import contextlib
 import datetime
 import hashlib
 import json
+import logging
 import math
 import os
 import random
 import re
 import requests
+import tempfile
 
 from contextlib import ExitStack
 from django.contrib.auth import authenticate
@@ -81,7 +84,7 @@ class TimeControl(object):
             moves = None if moves == '' else moves.rstrip('/')
             inc   = 0.0  if inc   is None else inc.lstrip('+')
 
-            # Format the time control for cutechess cleanly
+            # Format the time control for match runner cleanly
             if moves is None: return '%.1f+%.2f' % (float(base), float(inc))
             return '%d/%.1f+%.2f' % (int(moves), float(base), float(inc))
 
@@ -136,6 +139,11 @@ def workload_uses_time_based_tc(workload):
        or (base_type != TimeControl.FIXED_NODES and base_type != TimeControl.FIXED_DEPTH)
 
 
+
+def path_join(*args):
+    return "/".join([f.lstrip("/").rstrip("/") for f in args]).rstrip('/')
+
+
 def read_git_credentials(engine):
     fname = 'credentials.%s' % (engine.replace(' ', '').lower())
     fpath = os.path.join(PROJECT_PATH, 'Config', fname)
@@ -143,8 +151,148 @@ def read_git_credentials(engine):
         with open(fpath) as fin:
             return { 'Authorization' : 'token %s' % fin.readlines()[0].rstrip() }
 
-def path_join(*args):
-    return "/".join([f.lstrip("/").rstrip("/") for f in args]).rstrip('/')
+
+
+## LLR History
+##
+## Every result submission appends a (games, llr, verdict) sample to a small
+## JSON file, which the workload page renders as an inline SVG sparkline. The
+## series is append-only, and downsampled once it grows past twice the cap.
+
+LLR_HISTORY_SIZE = 120
+
+_logger = logging.getLogger(__name__)
+
+try: import fcntl
+except ImportError: fcntl = None
+
+try: import msvcrt
+except ImportError: msvcrt = None
+
+def llr_history_path(test_id):
+    return os.path.join(MEDIA_ROOT, 'llr_history', '%d.json' % (test_id))
+
+@contextlib.contextmanager
+def _history_lock(path):
+
+    # Serialize the whole read-modify-write. Two concurrent result submissions
+    # would otherwise both load the same file, and the slower writer would
+    # clobber the faster one's appends, leaving gaps in the series.
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    lockfd = os.open(path + '.lock', os.O_CREAT | os.O_RDWR, 0o644)
+
+    try:
+        if fcntl:
+            fcntl.flock(lockfd, fcntl.LOCK_EX)
+        elif msvcrt:
+            msvcrt.locking(lockfd, msvcrt.LK_LOCK, 1)
+        yield
+    finally:
+        try:
+            if not fcntl and msvcrt:
+                os.lseek(lockfd, 0, os.SEEK_SET)
+                msvcrt.locking(lockfd, msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+        os.close(lockfd)
+
+def _read_llr_history(path):
+
+    if not os.path.exists(path):
+        return None
+
+    with open(path) as fin:
+        content = fin.read()
+
+    if not content.strip():
+        return None
+
+    history = json.loads(content)
+
+    if not isinstance(history, list) or not all(
+            isinstance(p, list) and 2 <= len(p) <= 3 for p in history):
+        raise ValueError('Malformed LLR history in %s' % (path))
+
+    return history
+
+def _write_llr_history(path, history):
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd, tmppath = tempfile.mkstemp(dir=os.path.dirname(path), suffix='.tmp')
+
+    try:
+        with os.fdopen(fd, 'w') as fout:
+            json.dump(history, fout)
+        os.replace(tmppath, path)
+
+    except Exception:
+        try: os.unlink(tmppath)
+        except OSError: pass
+        raise
+
+def downsample_history(history, target_size):
+
+    N = len(history)
+    if N <= target_size or target_size < 2:
+        return history
+
+    buckets = target_size - 2
+    step    = (N - 2) / float(buckets)
+    out     = [history[0]]
+
+    for i in range(buckets):
+        lo, hi = int(i * step) + 1, max(int((i + 1) * step) + 1, int(i * step) + 2)
+        bucket = history[lo:hi]
+        if bucket: # Keep the most extreme sample, so peaks survive
+            out.append(max(bucket, key=lambda p: abs(p[1])))
+
+    out.append(history[-1])
+    return out
+
+def load_llr_history(test):
+
+    try:
+        history = _read_llr_history(llr_history_path(test.id))
+    except Exception:
+        _logger.warning('Failed to load LLR history for Test %s', test.id, exc_info=True)
+        return [[0, 0.0]]
+
+    return history or [[0, 0.0]]
+
+def record_llr_history(test):
+
+    path = llr_history_path(test.id)
+
+    with _history_lock(path):
+
+        try:
+            history = _read_llr_history(path)
+
+        except Exception:
+            _logger.warning('Corrupt LLR history %s; starting fresh', path, exc_info=True)
+            try: os.replace(path, path + '.corrupt')
+            except OSError: pass
+            history = None
+
+        history = history or [[0, 0.0]]
+        point   = [test.games, round(test.currentllr, 4), int(test.wins >= test.losses)]
+
+        if point[0] < history[-1][0]:
+            return
+
+        if history[-1][0] == point[0]:
+            history[-1] = point
+        else:
+            history.append(point)
+
+        if history[0][0] != 0:
+            history.insert(0, [0, 0.0])
+
+        if len(history) >= LLR_HISTORY_SIZE * 2:
+            history = downsample_history(history, LLR_HISTORY_SIZE)
+
+        _write_llr_history(path, history)
 
 def extract_option(options, option):
 
@@ -168,24 +316,25 @@ def get_pending_tests():
 
 def get_active_tests():
     t = Test.objects.filter(approved=True)
-    t = t.exclude(awaiting=True)
     t = t.exclude(finished=True)
     t = t.exclude(deleted=True)
     return t.order_by('-priority', '-currentllr')
+
+def group_active_tests_by_priority(active):
+    grouped = []
+    for test in active:
+        if len(grouped) == 0 or grouped[-1]['priority'] != test.priority:
+            grouped.append({ 'priority' : test.priority, 'tests' : [] })
+        grouped[-1]['tests'].append(test)
+    return grouped
 
 def get_completed_tests():
     t = Test.objects.filter(finished=True)
     t = t.exclude(deleted=True)
     return t.order_by('-updated')
 
-def get_awaiting_tests():
-    t = Test.objects.filter(awaiting=True)
-    t = t.exclude(finished=True)
-    t = t.exclude(deleted=True)
-    return t.order_by('-creation')
 
-
-def getRecentMachines(minutes=5):
+def getRecentMachines(minutes=2):
     target = datetime.datetime.utcnow()
     target = target.replace(tzinfo=timezone.utc)
     target = target - datetime.timedelta(minutes=minutes)
@@ -230,53 +379,6 @@ def getPaging(content, page, url, pagelen=25):
     }
 
     return start, end, context
-
-
-
-def branch_is_out_of_date(test):
-
-    # Cannot compare across engines
-    if test.dev_engine != test.base_engine:
-        return False
-
-    # Format the request to the Github endpoint
-    base = 'https://api.github.com/repos/'
-    base = test.dev_repo.replace('github.com', 'api.github.com/repos')
-    url  = path_join(base, 'compare', '%s...%s' % (test.dev.sha, test.base.sha))
-
-    try:
-        # Out of date if ahead_by is non-zero
-        headers = read_git_credentials(test.dev_engine)
-        data    = requests.get(url, headers=headers).json()
-        return data.get('ahead_by', 0) > 0
-
-    except:
-        # If something went wrong, just ignore it
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-
-def get_machine(machineid, user, info):
-
-    # Create a new machine if we don't have an id
-    if machineid == 'None':
-        return Machine(user=user, info=info)
-
-    # Fetch the requested machine, which hopefully exists
-    try: machine = Machine.objects.get(id=int(machineid))
-    except: return None
-
-    # Workload requests should always contain a MAC
-    if 'mac_address' not in machine.info:
-        return None
-
-    # Soft-verify by checking if the MAC addresses match
-    if machine.info['mac_address'] != info['mac_address']:
-        return None
-
-    return machine
 
 
 # Purely Helper functions for Networks views
@@ -562,7 +664,20 @@ def update_test(request, machine):
     # Pentanomial Implementation
     LL, LD, DD, DW, WW = map(int, request.POST['pentanomial'].split())
 
+    # SPSA Delta update vector; might not have this
+    raw_spsa_delta = request.POST.get('spsa_delta', '')
+    spsa_delta     = json.loads(raw_spsa_delta) if raw_spsa_delta else []
+
     with transaction.atomic():
+
+        # MASSIVE risk for concurrent access to the Test. select_for_update() will lock the row,
+        # which correctly ensures no other entity can modify it. HOWEVER, spsa_run and the various
+        # spsa_run.parameters are NOT locked via this query. This is okay because no other location
+        # in OpenBench would be modifying the contents of those models.
+        #
+        # ALL of the updates here, even the trivial ones to the Profile and Machine, are wrapped in
+        # same transaction.atomic(). The sole purpose and utility of that is to ensure either EVERYTHING
+        # gets updated as per this function, or NOTHING gets updated.
 
         test = Test.objects.select_for_update().get(id=test_id)
 
@@ -608,12 +723,15 @@ def update_test(request, machine):
 
         elif test.test_mode == 'SPSA':
 
-            # Update each parameter, as determined by the Worker
-            for name, param in test.spsa['parameters'].items():
-                x = param['value'] + float(request.POST['spsa_%s' % (name)])
-                param['value'] = max(param['min'], min(param['max'], x))
+            # Apply updates to every Parameter, ensuring clipping
+            parameters = list(test.spsa_run.parameters.order_by('index'))
+            for delta, param in zip(spsa_delta, parameters):
+                param.value = max(param.min_value, min(param.max_value, param.value + delta))
 
-            test.finished = test.games >= 2 * test.spsa['pairs_per'] * test.spsa['iterations']
+            # Bulk update to fire off all the .save()s
+            SPSAParameter.objects.bulk_update(parameters, ['value'])
+
+            test.finished = test.games >= 2 * test.spsa_run.pairs_per * test.spsa_run.iterations
 
         elif test.test_mode == 'DATAGEN':
 
@@ -622,32 +740,38 @@ def update_test(request, machine):
 
         test.save()
 
-    # Update Result object; No risk from concurrent access
-    Result.objects.filter(id=result_id).update(
-        games    = F('games'   ) + games,
-        losses   = F('losses'  ) + losses,
-        draws    = F('draws'   ) + draws,
-        wins     = F('wins'    ) + wins,
-        LL       = F('LL'      ) + LL,
-        LD       = F('LD'      ) + LD,
-        DD       = F('DD'      ) + DD,
-        DW       = F('DW'      ) + DW,
-        WW       = F('WW'      ) + WW,
-        crashes  = F('crashes' ) + crashes,
-        timeloss = F('timeloss') + timelosses,
-        updated  = timezone.now()
-    )
+        # Append an LLR sample for the workload page's history graph
+        if test.test_mode == 'SPRT':
+            try: record_llr_history(test)
+            except Exception:
+                _logger.warning('Failed to record LLR history for Test %s', test.id, exc_info=True)
 
-    # Update Profile object; No risk from concurrent access
-    Profile.objects.filter(user=Machine.objects.get(id=machine_id).user).update(
-        games=F('games') + games,
-        updated=timezone.now()
-    )
+        # Update Result object; No risk from concurrent access
+        Result.objects.filter(id=result_id).update(
+            games    = F('games'   ) + games,
+            losses   = F('losses'  ) + losses,
+            draws    = F('draws'   ) + draws,
+            wins     = F('wins'    ) + wins,
+            LL       = F('LL'      ) + LL,
+            LD       = F('LD'      ) + LD,
+            DD       = F('DD'      ) + DD,
+            DW       = F('DW'      ) + DW,
+            WW       = F('WW'      ) + WW,
+            crashes  = F('crashes' ) + crashes,
+            timeloss = F('timeloss') + timelosses,
+            updated  = timezone.now()
+        )
 
-    # Update Machine object; No risk from concurrent access
-    Machine.objects.filter(id=machine_id).update(
-        updated=timezone.now()
-    )
+        # Update Profile object; Some risk from concurrent access
+        Profile.objects.filter(user=Machine.objects.select_for_update().get(id=machine_id).user).update(
+            games=F('games') + games,
+            updated=timezone.now()
+        )
+
+        # Update Machine object; No meaningful risk from concurrent access
+        Machine.objects.filter(id=machine_id).update(
+            updated=timezone.now()
+        )
 
     # Send update to webhook, if it exists
     if test.finished and os.path.exists("webhooks") and os.path.exists("discord.json"):

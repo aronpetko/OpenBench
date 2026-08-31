@@ -18,8 +18,18 @@
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-import re, django
-import OpenBench.config, OpenBench.utils, OpenBench.stats, OpenBench.models
+import django
+import html
+import json
+import re
+
+import OpenBench.config
+import OpenBench.models
+import OpenBench.spsa_utils
+import OpenBench.stats
+import OpenBench.utils
+
+from django.utils.safestring import mark_safe
 
 def oneDigitPrecision(value):
     try:
@@ -45,18 +55,14 @@ def twoDigitPrecision(value):
 
 def gitDiffLink(test):
 
-    engines = OpenBench.config.OPENBENCH_CONFIG['engines']
-
-    if test.dev_engine in engines and engines[test.dev_engine]['private']:
-        repo = OpenBench.config.OPENBENCH_CONFIG['engines'][test.dev_engine]['source']
-    else:
-        repo = OpenBench.utils.path_join(*test.dev.source.split('/')[:-2])
+    repo = OpenBench.utils.path_join(*test.dev.source.split('/')[:-2])
+    repo = repo.replace('://api.github.com', '://github.com').replace('/repos/', '/')
 
     if test.test_mode == 'SPSA':
         return OpenBench.utils.path_join(repo, 'compare', test.dev.sha[:8])
 
     return OpenBench.utils.path_join(repo, 'compare',
-        '{0}..{1}'.format( test.base.sha[:8], test.dev.sha[:8]))
+        '{0}..{1}'.format(test.base.sha[:8], test.dev.sha[:8]))
 
 def shortStatBlock(test):
 
@@ -64,10 +70,11 @@ def shortStatBlock(test):
     penta_line = 'Ptnml(0-2): %d, %d, %d, %d, %d' % test.as_penta()
 
     if test.test_mode == 'SPSA':
+        spsa_run = test.spsa_run # Avoid extra database accesses
         statlines = [
-            'Tuning %d Parameters' % (len(test.spsa['parameters'].keys())),
-            '%d/%d Iterations' % (test.games / (2 * test.spsa['pairs_per']), test.spsa['iterations']),
-            '%d/%d Games Played' % (test.games, 2 * test.spsa['iterations'] * test.spsa['pairs_per'])]
+            'Tuning %d Parameters' % (spsa_run.parameters.count()),
+            '%d/%d Iterations' % (test.games / (2 * spsa_run.pairs_per), spsa_run.iterations),
+            '%d/%d Games Played' % (test.games, 2 * spsa_run.iterations * spsa_run.pairs_per)]
 
     elif test.test_mode == 'SPRT':
         llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
@@ -221,94 +228,6 @@ register.filter('compilerBlock', compilerBlock)
 register.filter('removePrefix', removePrefix)
 register.filter('machine_name', machine_name)
 
-####
-
-def spsa_param_digest(workload):
-
-    digest = []
-
-    # C and R are compressed as we progress iterations
-    iteration     = 1 + (workload.games / (workload.spsa['pairs_per'] * 2))
-    c_compression = iteration ** workload.spsa['Gamma']
-    r_compression = (workload.spsa['A'] + iteration) ** workload.spsa['Alpha']
-
-    # Maintain the original order, if there was one
-    keys = sorted(
-        workload.spsa['parameters'].keys(),
-        key=lambda x: workload.spsa['parameters'][x].get('index', -1)
-    )
-
-    for name in keys:
-
-        param = workload.spsa['parameters'][name]
-
-        # C and R if we got a workload right now
-        c = max(param['c'] / c_compression, 0.00 if param['float'] else 0.50)
-        r = param['a'] / r_compression / c ** 2
-
-        fstr = '%.4f' if param['float'] else '%d'
-
-        digest.append([
-            name,
-            '%.4f' % (param['value']),
-            fstr   % (param['start']),
-            fstr   % (param['min'  ]),
-            fstr   % (param['max'  ]),
-            '%.4f' % (c),
-            '%.4f' % (param['c_end']),
-            '%.4f' % (r),
-            '%.4f' % (param['r_end']),
-        ])
-
-    return digest
-
-def spsa_param_digest_headers(workload):
-    return ['Name', 'Curr', 'Start', 'Min', 'Max', 'C', 'C_end', 'R', 'R_end']
-
-def spsa_original_input(workload):
-
-    # Maintain the original order, if there was one
-    keys = sorted(
-        workload.spsa['parameters'].keys(),
-        key=lambda x: workload.spsa['parameters'][x].get('index', -1)
-    )
-
-    lines = []
-    for name in keys:
-
-        param = workload.spsa['parameters'][name]
-        dtype = 'float' if param['float'] else 'int'
-
-        # Original 7 token Input
-        lines.append(', '.join([
-            name,
-            dtype,
-            str(param['start']),
-            str(param['min'  ]),
-            str(param['max'  ]),
-            str(param['c_end']),
-            str(param['r_end']),
-        ]))
-
-    return '\n'.join(lines)
-
-def spsa_optimal_values(workload):
-
-    # Maintain the original order, if there was one
-    keys = sorted(
-        workload.spsa['parameters'].keys(),
-        key=lambda x: workload.spsa['parameters'][x].get('index', -1)
-    )
-
-    lines = []
-    for name in keys:
-        param = workload.spsa['parameters'][name]
-        value = param['value'] if param['float'] else round(param['value'])
-        lines.append(', '.join([name, str(value)]))
-
-    return '\n'.join(lines)
-
-
 def book_download_link(workload):
     if workload.book_name in OpenBench.config.OPENBENCH_CONFIG['books']:
         return OpenBench.config.OPENBENCH_CONFIG['books'][workload.book_name]['source']
@@ -370,12 +289,6 @@ def test_is_time_odds(test):
 def test_is_fischer(test):
     return 'FRC' in test.book_name.upper() or '960' in test.book_name.upper()
 
-
-register.filter('spsa_param_digest', spsa_param_digest)
-register.filter('spsa_param_digest_headers', spsa_param_digest_headers)
-register.filter('spsa_original_input', spsa_original_input)
-register.filter('spsa_optimal_values', spsa_optimal_values)
-
 register.filter('book_download_link', book_download_link)
 register.filter('network_download_link', network_download_link)
 
@@ -398,3 +311,219 @@ def next(iterable, index):
 def previous(iterable, index):
     try: return iterable[int(index) - 1]
     except: return None
+
+
+def llr_history_graph(test, width=340, height=120):
+
+    ## Render the LLR-over-games series as a standalone inline SVG. Doing this
+    ## server-side keeps the workload page free of charting dependencies, and
+    ## lets the graph render before any JavaScript runs. The hover readout is
+    ## wired up in workload.html, using the JSON we stash on the wrapper.
+
+    if test.test_mode != 'SPRT':
+        return ''
+
+    history     = list(OpenBench.utils.load_llr_history(test))
+    cur_verdict = int(test.wins >= test.losses)
+
+    # The series always starts at the origin, and ends at the present
+    if not history or history[0][0] != 0:
+        history.insert(0, [0, 0.0])
+    if history[-1][0] != test.games or history[-1][1] != test.currentllr:
+        history.append([test.games, test.currentllr, cur_verdict])
+
+    x_max = max(max(p[0] for p in history), 1)
+
+    # Center 0.00 vertically, and pad out past the widest observed value
+    observed = max(abs(test.lowerllr), abs(test.upperllr), max(abs(p[1]) for p in history))
+    extent   = max(observed * 1.15, 0.5)
+    y_min, y_max = -extent, extent
+
+    L, R, T, B = 8, 8, 8, 8
+    iw, ih = max(width - L - R, 1), max(height - T - B, 1)
+
+    sx = lambda v : L + iw * (v / x_max)
+    sy = lambda v : T + ih * (1.0 - (v - y_min) / (y_max - y_min))
+
+    verdict = lambda p : p[2] if len(p) >= 3 else cur_verdict
+
+    points = [{
+        'g' : p[0], 'l' : round(p[1], 4), 'v' : verdict(p),
+        'x' : round(sx(p[0]), 2), 'y' : round(sy(p[1]), 2),
+    } for p in history]
+
+    # Above 0.0 is green; below is red, unless we are winning on raw score
+    def band(p):
+        if p['l'] >= 0.0: return 'pos'
+        return 'yellow' if p['v'] else 'neg'
+
+    # Split the polyline at each colour change, interpolating the zero crossing
+    def crossing(a, b):
+        denom = b['l'] - a['l']
+        if abs(denom) < 1e-7: return None
+        r = -a['l'] / denom
+        return {
+            'g' : a['g'] + r * (b['g'] - a['g']), 'l' : 0.0, 'v' : b['v'],
+            'x' : round(a['x'] + r * (b['x'] - a['x']), 2), 'y' : round(sy(0.0), 2),
+        }
+
+    segments = { 'pos' : [], 'yellow' : [], 'neg' : [] }
+    segment  = [points[0]]
+    category = band(points[0])
+
+    for i in range(1, len(points)):
+
+        a, b, b_category = points[i-1], points[i], band(points[i])
+
+        if b_category == category:
+            segment.append(b)
+            continue
+
+        if (a['l'] >= 0.0) != (b['l'] >= 0.0):
+            cross = crossing(a, b)
+            if cross: segment.append(cross)
+            if len(segment) >= 2: segments[category].append(segment)
+            segment = [cross, b] if cross else [b]
+        else:
+            if len(segment) >= 2: segments[category].append(segment)
+            segment = [a, b]
+
+        category = b_category
+
+    if len(segment) >= 2:
+        segments[category].append(segment)
+
+    def polylines(name):
+        return ''.join(
+            '<polyline class="llr-path llr-path-%s" points="%s"/>' % (
+                name, ' '.join('%.2f,%.2f' % (p['x'], p['y']) for p in seg))
+            for seg in segments[name])
+
+    grid = []
+    for v in (y_max, 0.0, y_min):
+        grid.append('<line class="llr-grid" x1="%d" y1="%.2f" x2="%d" y2="%.2f"/>' % (
+            L, sy(v), width - R, sy(v)))
+    for v in (x_max / 4.0, x_max / 2.0, 3.0 * x_max / 4.0):
+        grid.append('<line class="llr-grid" x1="%.2f" y1="%d" x2="%.2f" y2="%d"/>' % (
+            sx(v), T, sx(v), height - B))
+
+    guides = []
+    for v, name in ((test.lowerllr, 'llr-bound'), (0.0, 'llr-zero'), (test.upperllr, 'llr-bound')):
+        guides.append('<line class="%s" x1="%d" y1="%.2f" x2="%d" y2="%.2f"/>' % (
+            name, L, sy(v), width - R, sy(v)))
+        if name == 'llr-bound':
+            guides.append('<text class="llr-bound-label" x="%d" y="%.2f">%+.2f</text>' % (
+                L + 4, sy(v) + (11.0 if v > 0 else -3.5), v))
+
+    last      = points[-1]
+    last_band = band(last)
+    clip_id   = 'llr-reveal-%d' % (test.id)
+
+    halo = '' if test.finished else (
+        '<circle class="llr-endpoint-halo llr-fill-%s" cx="%.2f" cy="%.2f" r="2.8"/>' % (
+            last_band, last['x'], last['y']))
+
+    return mark_safe((
+        '<div class="llr-history-widget" data-history="%s">'
+          '<div class="llr-history-chart">'
+            '<div class="llr-history-yaxis"><div>%+.2f</div><div>0.00</div><div>%+.2f</div></div>'
+            '<div class="llr-history-main">'
+              '<div class="llr-history-plot">'
+                '<svg class="llr-history-graph" viewBox="0 0 %d %d" preserveAspectRatio="none" role="img" aria-label="%s">'
+                  '<defs><clipPath id="%s"><rect class="llr-reveal" x="0" y="0" width="%d" height="%d"/></clipPath></defs>'
+                  '<rect class="llr-bg" x="0" y="0" width="%d" height="%d"/>'
+                  '%s%s'
+                  '<g clip-path="url(#%s)">%s%s%s</g>'
+                  '<g class="llr-endpoint-grp">%s'
+                    '<circle class="llr-endpoint llr-fill-%s" cx="%.2f" cy="%.2f" r="2.8"/>'
+                  '</g>'
+                  '<line class="llr-hover-line" x1="%.2f" y1="%d" x2="%.2f" y2="%d"/>'
+                  '<circle class="llr-hover-point" cx="%.2f" cy="%.2f" r="3.2"/>'
+                  '<rect class="llr-hitbox" x="0" y="0" width="%d" height="%d"/>'
+                '</svg>'
+                '<div class="llr-history-tooltip"></div>'
+              '</div>'
+              '<div class="llr-history-xaxis"><div>0</div><div>%s</div><div>%s games</div></div>'
+            '</div>'
+          '</div>'
+        '</div>'
+    ) % (
+        html.escape(json.dumps(points, separators=(',', ':'))),
+        y_max, y_min,
+        width, height,
+        html.escape('LLR %.2f after %d games' % (test.currentllr, test.games)),
+        clip_id, width, height,
+        width, height,
+        ''.join(grid), ''.join(guides),
+        clip_id, polylines('pos'), polylines('yellow'), polylines('neg'),
+        halo, last_band, last['x'], last['y'],
+        last['x'], T, last['x'], height - B,
+        last['x'], last['y'],
+        width, height,
+        insertCommas(int(round(x_max / 2.0))), insertCommas(x_max),
+    ))
+
+register.filter('llr_history_graph', llr_history_graph)
+
+
+## Stat Blocks, with the labels picked out
+##
+## Same content and spacing as longStatBlock, but wrapped in spans so the
+## workload page can hold the labels in the accent colour and split the values
+## between plain white and grey. The copy buttons read innerText, so what lands
+## on the clipboard is byte for byte the plain text version.
+
+def _sb(css_class, text):
+    return '<span class="%s">%s</span>' % (css_class, html.escape(text))
+
+def _sb_label(name):
+    return _sb('sb-label', '%-5s' % (name)) + _sb('sb-pipe', ' | ')
+
+def longStatBlockHTML(test):
+
+    assert test.test_mode != 'SPSA'
+
+    threads     = int(OpenBench.utils.extract_option(test.dev_options, 'Threads'))
+    hashmb      = int(OpenBench.utils.extract_option(test.dev_options, 'Hash'))
+    timecontrol = test.dev_time_control + ['s', '']['=' in test.dev_time_control]
+    type_text   = 'SPRT' if test.test_mode == 'SPRT' else 'Conf'
+
+    lower, elo, upper = OpenBench.stats.Elo(test.results())
+    error = max(upper - elo, elo - lower)
+
+    lines = [
+        _sb_label('Elo')
+            + _sb('sb-value', '%0.2f' % (elo))
+            + _sb('sb-dim', ' +- %0.2f (95%%)' % (error)),
+
+        _sb_label(type_text)
+            + _sb('sb-value', timecontrol)
+            + _sb('sb-dim', ' Threads=%d Hash=%dMB' % (threads, hashmb)),
+    ]
+
+    if test.test_mode == 'SPRT':
+        lines.append(
+            _sb_label('LLR')
+                + _sb('sb-value', '%0.2f' % (test.currentllr))
+                + _sb('sb-dim', ' (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
+                    test.lowerllr, test.upperllr, test.elolower, test.eloupper)))
+
+    games, wins, losses, draws = test.as_nwld()
+
+    counts = ''
+    for label, value in (('N', games), ('W', wins), ('L', losses), ('D', draws)):
+        counts += _sb('sb-dim', '%s: ' % (label)) + _sb('sb-value', '%d' % (value))
+        if label != 'D': counts += _sb('sb-dim', ' ')
+
+    lines.append(_sb_label('Games') + counts)
+
+    if test.use_penta:
+        penta = _sb('sb-dim', '[')
+        for i, value in enumerate(test.as_penta()):
+            if i: penta += _sb('sb-dim', ', ')
+            penta += _sb('sb-value', '%d' % (value))
+        lines.append(_sb_label('Penta') + penta + _sb('sb-dim', ']'))
+
+    return mark_safe('\n'.join(lines))
+
+register.filter('longStatBlockHTML', longStatBlockHTML)

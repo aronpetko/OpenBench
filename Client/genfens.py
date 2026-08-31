@@ -44,10 +44,10 @@ import utils
 
 def genfens_required_openings_each(config):
 
-    cutechess_cnt = config.workload['distribution']['cutechess-count']
-    games_per     = config.workload['distribution']['games-per-cutechess']
-    repeat        = config.workload['test']['play_reverses']
-    total_games   = cutechess_cnt * games_per // (1 + repeat)
+    runner_cnt  = config.workload['distribution']['runner-count']
+    rounds_per  = config.workload['distribution']['rounds-per-runner']
+    repeat      = config.workload['test']['play_reverses']
+    total_games = runner_cnt * rounds_per // (1 + repeat)
 
     return math.ceil(total_games / config.threads)
 
@@ -61,9 +61,6 @@ def genfens_book_input_name(config):
 def genfens_command_builder(args, index):
 
     command = ['./%s' % (args['engine'])]
-
-    if args['network'] and args['private']:
-        command += ['setoption name EvalFile value %s' % (args['network'])]
 
     fstr = 'genfens %d seed %d book %s %s'
     command += [fstr % (args['N'], args['seeds'][index], args['book'], args['extra']), 'quit']
@@ -130,8 +127,8 @@ def create_genfens_opening_book(args):
             genfens_progress_bar(iteration+1, N * threads)
 
     except queue.Empty: # Force kill the engine, thus causing the processes to finish
-        utils.kill_process_by_name(binary_name)
-        raise utils.OpenBenchFailedGenfensException('[%s] Stalled during genfens' % (binary_name))
+        utils.kill_process_by_name(args['engine'])
+        raise utils.OpenBenchFailedGenfensException('[%s] Stalled during genfens' % (args['engine']))
 
     finally: # Join everything to avoid zombie processes
         for process in processes:

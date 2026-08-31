@@ -1,0 +1,27 @@
+"""
+Local development settings.
+
+Runs the site against a throwaway SQLite file instead of the production MySQL
+instance, so the UI can be worked on without a database server:
+
+    python manage.py makemigrations OpenBench --settings=OpenSite.settings_local
+    python manage.py migrate                  --settings=OpenSite.settings_local
+    python manage.py seed_demo                --settings=OpenSite.settings_local
+    python manage.py runserver                --settings=OpenSite.settings_local
+
+Nothing here is used in production; OpenSite.settings remains the default.
+"""
+
+from OpenSite.settings import *
+
+DEBUG = True
+
+# Serve readable HTML, so the page source is inspectable while styling
+HTML_MINIFY = False
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}

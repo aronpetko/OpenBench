@@ -1,6 +1,4 @@
 *.pyc
-Client/*
-OpenBench/migrations/*
 
 credentials
 credentials.*
@@ -10,10 +8,6 @@ Scripts/Engines/*
 Scripts/Networks/*
 
 Media/*
-
-!Client/*.py
-!Client/cutechess-ob
-!Client/cutechess-ob.exe
 
 Media/PGNs/*
 Media/Networks/*

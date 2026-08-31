@@ -56,7 +56,7 @@
             "both_options": "Threads=4 Hash=256 Minimal=true",
             "both_time_control": "40+0.4",
             "workload_size": 4
-        },
+        }
     },
 
     "tune_presets": {
@@ -90,7 +90,7 @@
         "LTC [4T]": {
             "dev_options": "Threads=4 Hash=256 Minimal=true",
             "dev_time_control": "40+0.0.4"
-        },
+        }
     },
 
     "datagen_presets": {

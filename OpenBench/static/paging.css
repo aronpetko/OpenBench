@@ -2,11 +2,16 @@
     display: inline-flex;
     justify-content: center;
     align-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background-color: var(--bg-panel);
 }
 
 #pagebrowse {
     display: flex;
     justify-content: center;
+    margin-bottom: 2rem;
 }
 
 .pages {
@@ -15,42 +20,39 @@
 
 .page, .ellipsis {
     display: inline-block;
-    padding: 6px 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 4px 0.8rem;
     margin: 0;
-    border-left: 1px solid var(--color1);
-    border-right: 1px solid var(--color1);
-    background-color: var(--color2); /* Dark background color */
-    color: var(--color-font2);
+    border-right: 1px solid var(--line-soft);
+    background-color: transparent;
+    color: var(--fg-2);
     text-decoration: none;
     cursor: pointer;
-    transition: background-color 0.2s; /* Add a smooth transition effect to background color */
-    height: 24px; /* This is just an example, adjust according to your needs */
-    line-height: 24px; /* Should be same as height */
+    transition: background-color 0.15s ease, color 0.15s ease;
+    height: 22px;
+    line-height: 22px;
     min-width: 1.6rem;
     text-align: center;
     vertical-align: middle;
 }
 
-.page:hover {
-    background-color: var(--color3); /* Darker background color on hover */
+.pagination > .page.next {
+    border-right: none;
 }
 
-.previous {
-    border-top-left-radius: 7px;
-    border-bottom-left-radius: 7px;
+.page:hover {
+    background-color: var(--bg-hover);
+    color: var(--fg-1);
 }
 
 .current {
-    background-color: var(--color3);
-}
-
-.next {
-    border-top-right-radius: 7px;
-    border-bottom-right-radius: 7px;
+    background-color: var(--teal-wash);
+    color: var(--teal-lit);
+    box-shadow: inset 0 -2px 0 var(--teal);
 }
 
 .ellipsis, .fa-solid {
-    /*margin: 0 4px;*/
-    pointer-events: none; /* Disable click events on ellipsis */
-    vertical-align: middle; /* Ensure icons are vertically centered */
+    pointer-events: none;
+    vertical-align: middle;
 }

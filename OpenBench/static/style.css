@@ -1,26 +1,96 @@
+/* # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+ *
+ *   FuryBench theme. Dark slate surfaces with a single teal accent, which
+ *   carries every interactive affordance: links, table headers, focus rings,
+ *   and the active-row marker. Result colours (green/blue/yellow/red) are the
+ *   only other hues, so a page scan reads as "teal chrome, coloured data".
+ *
+ *   The legacy --colorN / --color-fontN names are kept as aliases, since
+ *   form.css, paging.css and ethereal.css still reference them.
+ *
+ * # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # */
 
-a:link, a:visited, a:hover, a:active {
-    text-decoration: none;
-    color: #86C2D5;
+:root {
+    --bg-deep    : #0A0C0D;
+    --bg-1       : #0E1113;
+    --bg-2       : #14181A;
+    --bg-3       : #1D2225;
+    --bg-panel   : #0C0F10;
+    --bg-row-a   : #0B0E0F;
+    --bg-row-b   : #101416;
+    --bg-hover   : #171D20;
+    --bg-th      : #070809;
+
+    --line       : #1C2226;
+    --line-soft  : #14191C;
+
+    --teal       : #3FA2B9;
+    --teal-lit   : #86C2D5;
+    --teal-deep  : #1d5766;
+    --teal-wash  : rgba(63, 162, 185, 0.10);
+
+    --fg-1       : #D2D7DA;
+    --fg-2       : #8A9298;
+    --fg-3       : #5E666C;
+
+    /* Muted pastels: bright enough to keep near-black text legible, dim
+       enough not to glare off the near-black page behind them */
+    --stat-text  : #0A0C0D;
+    --stat-none  : #9BA3A8;
+    --stat-green : #6FB07F;
+    --stat-blue  : #79B3BE;
+    --stat-yellow: #C0BC78;
+    --stat-red   : #D28F7E;
+
+    --btn-blue     : #16262E;
+    --btn-blue-h   : #1E3540;
+    --btn-start    : #1B3039;
+    --btn-start-h  : #244050;
+    --btn-preset   : #0a4a3c;
+    --btn-preset-h : #0e6a56;
+    --btn-yellow   : #4E3206;
+    --btn-yellow-h : #6B450A;
+    --btn-red      : #4C1913;
+    --btn-red-h    : #6A2A1C;
+    --btn-off      : #14181A;
+
+    --radius     : 0px;
+    --radius-sm  : 0px;
+
+    --font-mono  : "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-ui    : "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    --radius     : 8px;
+    --radius-sm  : 5px;
+
+    /* Legacy aliases */
+    --color1      : var(--bg-1);
+    --color2      : var(--bg-2);
+    --color3      : var(--bg-3);
+    --color-font1 : var(--fg-1);
+    --color-font2 : var(--fg-2);
+    --color-font3 : var(--teal);
+}
+
+/* Document */
+
+html {
+    font-size: 13.5px;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
-    --color1: #222222;
-    --color2: #2D2D2D;
-    --color3: #3B3B3B;
+    background-color: var(--bg-deep);
 
-    --color-font1: #DBDEE1;
-    --color-font2: #949BA4;
-    --color-font3: #3FA2B9;
-
-    background-color: var(--color1);
-
-    font-size: 16px;
-    font-family: "Courier Prime", serif;
-    display:flex;
+    color: var(--fg-2);
+    font-size: 0.88rem;
+    font-family: var(--font-mono);
+    font-feature-settings: "zero" 1;
+    display: flex;
+    min-height: 100vh;
 }
 
-body, html, main{
+body, html, main {
     padding: 0;
     margin: 0;
     min-width: 100%;
@@ -28,94 +98,398 @@ body, html, main{
     white-space: nowrap;
 }
 
+::selection {
+    background: rgba(63, 162, 185, 0.35);
+    color: var(--fg-1);
+}
+
+a:link, a:visited, a:hover, a:active {
+    text-decoration: none;
+    color: var(--teal-lit);
+    transition: color 0.15s ease;
+}
+
+a:hover {
+    color: #B3DFEC;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+}
+
+/* Sidebar */
+
 #sidebar {
-    padding: 60px 16px 16px 16px;
-    flex-basis: calc(min(300px, max(200px, 10%)));
+    padding: 18px 10px 28px 12px;
+    flex: 0 0 calc(min(224px, max(180px, 10%)));
+    font-family: var(--font-ui);
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--line);
+    z-index: 1;
+
+    /* The engine list is long, so the nav scrolls on its own and stays put
+       while the page moves underneath it */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    max-height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg-3) transparent;
 }
 
 #sidebar-toggle {
     display: none;
 }
 
-#content-parent{
-    flex-grow: 1;
-    justify-content: left;
-    height: 100%;
-
-    box-sizing: border-box;
-    padding-left: 2rem;
-    padding-right: 2rem;
+#sidebar .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 6px 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line-soft);
 }
 
-#content {
-    max-width: calc(min(100%,1000px));
-    width: 100%;
-    white-space: nowrap;
-    display: inline-block;
+#sidebar .brand img {
+    width: 26px;
+    height: 26px;
+}
+
+#sidebar .brand .brand-name {
+    color: var(--fg-1);
+    font-size: 1.056rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+#sidebar .brand .brand-sub {
+    display: block;
+    color: var(--fg-3);
+    font-size: 0.611rem;
+    letter-spacing: 0.09em;
+    text-transform: lowercase;
 }
 
 #sidebar ul {
     list-style-type: none;
-    padding: 0px 16px 0px 8px;
-    line-height: 1.75;
+    padding: 0 4px 0 2px;
+    margin: 0.25rem 0 0.7rem;
+    line-height: 1.45;
 }
 
 #sidebar li {
-    padding: 4px 16px 2px;
-    font-size: 1.0rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease-in-out;
+    padding: 0;
+    font-size: 0.922rem;
+    border-radius: var(--radius-sm);
 }
 
 #sidebar li a {
-    color: var(--color-font2);
-    display: block;
+    color: var(--fg-2);
+    text-transform: lowercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
+    box-sizing: border-box;
+    padding: 5px 9px;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-#sidebar li:hover {
-    background-color: #303030;
+#sidebar li a i {
+    color: var(--fg-3);
+    transition: color 0.15s ease;
+}
+
+#sidebar li a:hover {
+    background-color: var(--bg-hover);
+    color: var(--fg-1);
+}
+
+#sidebar li a:hover i {
+    color: var(--teal);
+}
+
+#sidebar li a.active {
+    background-color: var(--bg-hover);
+    color: var(--teal-lit);
+}
+
+#sidebar li a.active i {
+    color: var(--teal);
 }
 
 #sidebar .header {
-    color: var(--color-font3);
-    font-size: 1.1rem;
+    color: var(--teal);
+    font-size: 0.667rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    padding: 0 10px 2px;
     pointer-events: none;
 }
 
 #sidebar hr {
-    border: 1px var(--color2) solid;
+    display: none;
 }
 
-/* Table Striping, with overriding for the Table Header */
+/* Collapsed sidebar
+ *
+ * The class lives on <html> rather than <body> so the inline head script can
+ * restore it before first paint. Labels drop out, icons centre, and the title
+ * attributes on each link carry the names as native tooltips. */
+
+#sidebar .brand-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+#sidebar-collapse {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--fg-3);
+    cursor: pointer;
+    padding: 5px 6px;
+    font-size: 0.889rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+#sidebar-collapse:hover {
+    background-color: var(--bg-hover);
+    color: var(--teal);
+}
+
+html.sidebar-collapsed #sidebar {
+    flex-basis: 54px;
+    padding-left: 7px;
+    padding-right: 7px;
+}
+
+html.sidebar-collapsed #sidebar .brand {
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 0 12px;
+}
+
+html.sidebar-collapsed #sidebar .brand-text,
+html.sidebar-collapsed #sidebar .nav-label,
+html.sidebar-collapsed #sidebar .header {
+    display: none;
+}
+
+html.sidebar-collapsed #sidebar .brand-link {
+    justify-content: center;
+}
+
+html.sidebar-collapsed #sidebar-collapse i {
+    transform: rotate(180deg);
+}
+
+html.sidebar-collapsed #sidebar li a {
+    justify-content: center;
+    gap: 0;
+    padding: 6px 0;
+}
+
+/* Without the group headers, the lists need their own separators */
+html.sidebar-collapsed #sidebar ul + ul {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 0.45rem;
+}
+
+/* Collapsing is a desktop affordance; on mobile the drawer already handles it */
+@media (max-width: 767px) {
+    #sidebar-collapse { display: none; }
+
+    html.sidebar-collapsed #sidebar {
+        flex-basis: 100%;
+        padding-left: 12px;
+        padding-right: 10px;
+    }
+
+    html.sidebar-collapsed #sidebar .brand { flex-direction: row; }
+    html.sidebar-collapsed #sidebar .brand-text,
+    html.sidebar-collapsed #sidebar .nav-label,
+    html.sidebar-collapsed #sidebar .header { display: block; }
+    html.sidebar-collapsed #sidebar li a { justify-content: flex-start; gap: 8px; padding: 5px 9px; }
+    html.sidebar-collapsed #sidebar ul + ul { border-top: none; padding-top: 0; }
+}
+
+/* Content shell */
+
+#content-parent {
+    flex-grow: 1;
+    justify-content: left;
+    box-sizing: border-box;
+    padding: 0 1.25rem;
+    min-width: 0;
+}
+
+#content {
+    max-width: calc(min(100%, 980px));
+    width: 100%;
+    white-space: nowrap;
+    display: block;
+}
+
+#content-header {
+    display: flex;
+    align-items: center;
+    padding-top: 1.4rem;
+}
+
+#content-header h2 {
+    display: none;
+}
+
+#content-header h2 {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 1.15rem;
+    font-weight: 600;
+    white-space: normal;
+}
+
+#content .site-title {
+    color: var(--fg-1);
+    letter-spacing: 0.01em;
+}
+
+#content .site-title:hover {
+    color: var(--teal-lit);
+}
+
+/* The engines developed on this instance, as one static line under the
+ * heading. Wraps rather than scrolls; there is nothing to animate. */
+
+#content .engine-line {
+    margin: 0.4rem 0 1.2rem;
+    padding: 0.35rem 0;
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: lowercase;
+    color: var(--fg-2);
+    white-space: normal;
+    line-height: 1.9;
+}
+
+#content .engine-line-label {
+    color: var(--fg-3);
+}
+
+#content .engine-line-label::after,
+#content .engine-line-item:not(:last-child)::after {
+    content: "\2022";
+    color: var(--teal-deep);
+    margin: 0 0.7rem 0 0.5rem;
+    letter-spacing: 0;
+}
+
+/* Flash messages */
+
+#content .error-message,
+#content .warning-message,
+#content .status-message {
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid currentColor;
+    background-color: var(--bg-2);
+    white-space: pre-wrap;
+}
+
+#content .error-message   { color: #FF8A7A; }
+#content .warning-message { color: #E0C766; }
+#content .status-message  { color: #7BD79A; }
+
+/* Tables */
+
+#content table {
+    line-height: 1.05;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+/* Wide tables scroll inside their own panel rather than dragging a horizontal
+   scrollbar across the whole page. The scroll lives on a wrapper so the table
+   itself stays a table, and still stretches when there is room for it. */
+#content .table-scroll,
+#content #results,
+#content #parameters,
+#content #summary-container {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+#content th, #content td {
+    padding: 5px 9px;
+}
+
+#content td {
+    color: var(--fg-2);
+    border-bottom: 1px solid var(--line-soft);
+}
+
+#content .table-header th:first-child {
+    border-top-left-radius: var(--radius);
+}
+
+#content .table-header th:last-child {
+    border-top-right-radius: var(--radius);
+}
+
+#content .table-header th {
+    color: var(--teal);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    text-align: left;
+    background-color: var(--bg-th);
+    border-bottom: 1px solid var(--line);
+    padding-top: 6px;
+    padding-bottom: 5px;
+}
+
+#content .table-small-header th {
+    color: var(--fg-3);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    text-align: left;
+    background-color: var(--bg-th);
+    padding-top: 5px;
+    padding-bottom: 4px;
+}
 
 #content .stripes tr:nth-child(odd):not(.table-header) {
-    background-color: var(--color1);
+    background-color: var(--bg-row-a);
 }
 
 #content .stripes tr:nth-child(even):not(.table-header) {
-    background-color: var(--color2);
+    background-color: var(--bg-row-b);
 }
 
 #content .stripes th {
-    background-color: black;
+    background-color: var(--bg-th);
 }
 
-/* Tables that have hoverable table rows */
-
-#content .hoverable tr:nth-child(odd):hover:not(.table-header) {
-    background-color: #323232;
+#content .hoverable tr:not(.table-header):not(.table-spacer):not(.table-spacer-small):hover {
+    background-color: var(--bg-hover);
 }
-
-#content .hoverable tr:nth-child(even):hover:not(.table-header) {
-    background-color: #323232;
-}
-
-#content .hoverable tr:hover{
-    background-color: var(--color1);
-}
-
-/* Tables that are too long can wrap words */
 
 #content .wrappable td {
     white-space: pre-wrap;
@@ -123,241 +497,330 @@ body, html, main{
     word-wrap: break-word;
 }
 
-/* Things which enable a Cursor Pointer event */
-
 #content .cursor {
     cursor: pointer;
 }
 
-/* Table Headers in General */
-
-#content .table-header th:first-child {
-    border-top-left-radius: 12px;
-}
-
-#content .table-header th:last-child {
-    border-top-right-radius: 12px;
-}
-
-#content .table-header th {
-    color: var(--color-font3);
-    font-weight: 400;
-    background-color: #171717;
-}
-
-#content .table-small-header th {
-    color: var(--color-font3);
-    font-size: small;
-    background-color: #171717;
-}
-
-/* Table Spacer for chaining Tables as a hack */
-
 #content .table-spacer th, #content .table-spacer tr {
-    background-color: var(--color1);
-    height: 1rem;
+    background-color: transparent;
+    height: 0.85rem;
+    border: none;
 }
 
 #content .table-spacer-small th, #content .table-spacer-small tr {
-    background-color: #171717;
+    background-color: var(--bg-th);
     height: 0.4rem;
-    padding: 0px;
+    padding: 0;
 }
 
-/* Generic Table CSS for all Tables */
-
-#content table {
-    line-height: 96%;
-    border-collapse: collapse;
+#content .numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
-#content td {
-    color: var(--color-font2);
-    border-bottom: 1px #444444 solid;
+#content .branch_name {
+    font-style: italic;
 }
 
-#content th, #content td {
-    padding: 10px 12px 6px 12px;
+#content .active-highlight {
+    box-shadow: inset 3px 0 0 var(--teal);
 }
+
+/* Buttons */
 
 #content .anchor-container {
     display: flex;
     justify-content: space-between;
+    gap: 6px;
 }
 
 #content .anchor-container > .anchorbutton {
     flex: 1;
-    margin-right: 4px;
-}
-
-#content .anchor-container > .anchorbutton:last-child {
-    margin-right: 0px;
+    margin-right: 0;
 }
 
 #content .anchorbutton {
-    border-radius: 4px;
-    padding: 8px 0px 6px;
-    border-color: transparent;
-    color: var(--color-font1);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    text-transform: lowercase;
+    padding: 5px 9px;
+    border: 1px solid transparent;
+    color: var(--fg-1);
     display: inline-block;
     text-align: center;
-    transition: background-color 0.3s ease;
-    font-family: "Courier Prime", serif;
-    font-size: 13px;
+    transition: background-color 0.18s ease, transform 0.08s ease, border-color 0.18s ease;
+    font-family: inherit;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    white-space: normal;
+    line-height: 1.3;
     cursor: pointer;
+    user-select: none;
 }
 
-#content .btn-blue {
-    background-color: #1C2D40;
+#content .anchorbutton:active {
+    transform: translateY(1px);
 }
 
-#content .btn-start {
-    background-color: #384A5F;
-    width: 100%;
-}
+#content .btn-blue     { background-color: var(--btn-blue);   }
+#content .btn-start    { background-color: var(--btn-start);  width: 100%; }
+#content .btn-preset   { background-color: var(--btn-preset); }
+#content .btn-yellow   { background-color: var(--btn-yellow); }
+#content .btn-red      { background-color: var(--btn-red);    }
 
-#content .btn-preset {
-    background-color: #046c52;
-}
-
-#content .btn-yellow {
-    background-color: #7A4E09;
-}
-
-#content .btn-red {
-    background-color: #74261E;
-}
+#content .btn-blue:hover   { background-color: var(--btn-blue-h);   border-color: var(--teal-deep); }
+#content .btn-start:hover  { background-color: var(--btn-start-h);  border-color: var(--teal-deep); }
+#content .btn-preset:hover { background-color: var(--btn-preset-h); }
+#content .btn-yellow:hover { background-color: var(--btn-yellow-h); }
+#content .btn-red:hover    { background-color: var(--btn-red-h);    }
 
 #content .btn-disabled {
-    background-color: var(--color3);
-}
-
-#content .btn-blue:hover {
-    background-color: #2E3F57;
-}
-
-#content .btn-start:hover {
-    background-color: #2E3F57;
-}
-
-#content .btn-preset:hover {
-    background-color: #11a983;
-}
-
-#content .btn-yellow:hover {
-    background-color: #9B6B0F;
-}
-
-#content .btn-red:hover {
-    background-color: #8E3D28;
+    background-color: var(--btn-off);
+    color: var(--fg-3);
 }
 
 #content .btn-disabled:hover {
-    background-color: var(--color3);
+    background-color: var(--btn-off);
     cursor: not-allowed;
     transform: none;
 }
 
 #content .copy-button {
-    color: var(--color-font2);
+    color: var(--fg-2);
     transition: color 0.2s ease-in-out;
-
 }
 
 #content .copy-button:hover {
-    color: var(--color-font3);
+    color: var(--teal);
     cursor: pointer;
 }
 
-/* Short StatBlock to show SPRT and Test Results */
+/* Stat blocks */
 
 #content .statblock {
-    font-size: 13px;
-    color: black;
-    line-height: 92%;
-    background-color: #CCCCCC;
-    font-family: "Courier New";
-    border-radius: 4px;
-    padding: 7px 10px 4px;
+    font-size: 0.72rem;
+    color: var(--stat-text);
+    line-height: 1.4;
+    background-color: var(--stat-none);
+    font-family: var(--font-mono);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
 }
 
-#content .statblock-green {
-    background-color: #76D58E;
-}
-
-#content .statblock-blue {
-    background-color: #8CE3EC;
-}
-
-#content .statblock-yellow {
-    background-color: #C6CE6F;
-}
-
-#content .statblock-red {
-    background-color: #FFA590;
-}
+#content .statblock-green  { background-color: var(--stat-green);  }
+#content .statblock-blue   { background-color: var(--stat-blue);   }
+#content .statblock-yellow { background-color: var(--stat-yellow); }
+#content .statblock-red    { background-color: var(--stat-red);    }
 
 #content .redlink {
-    color: #FF4D4D;
+    color: #FF6F6F;
 }
-
-/* Long StatBlock which we can copy */
 
 #content .long-statblock {
-    background-color: var(--color3);
-    color: var(--color-font2);
-    border-radius: 4px;
-    padding: 0.50rem 0.75rem;
+    background-color: var(--bg-1);
+    color: var(--fg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.75rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    overflow-x: auto;
 }
 
-/* Test Views */
+/* Stat block: teal labels, values in white against grey supporting text */
 
-#content #config {
-    float: left;
+#content .sb-label { color: var(--teal);  }
+#content .sb-pipe  { color: var(--fg-3);  }
+#content .sb-dim   { color: var(--fg-2);  }
+#content .sb-value { color: var(--fg-1);  }
+
+/* Free-text note an approver can leave on a workload */
+
+#content .workload-info {
+    max-width: 62ch;
+    margin-top: 0.7rem;
+    padding: 0.55rem 0.85rem 0.55rem calc(0.85rem - 1px);
+    border-left: 2px solid var(--teal-deep);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background-color: var(--bg-1);
+    color: var(--fg-2);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
-#content #actions {
-    float: left;
+/* Panels and the workload hero */
+
+#content .panel {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1rem 1.15rem;
 }
 
-#content #results {
-    display: inline-block;
-    width: inherit;
+#content .panel-title {
+    color: var(--fg-3);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: lowercase;
+    margin: 0 0 0.7rem;
 }
+
+#content .workload-grid {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) 340px;
+    gap: 0.7rem;
+    align-items: start;
+    width: fit-content;
+    max-width: 100%;
+}
+
+/* Tables that span both columns, so their edges match the pair above */
+#content .workload-grid > .grid-row {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+#content .hero-summary,
+#content .hero-graph {
+    min-width: 0;
+}
+
+#content .hero-title {
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--fg-1);
+    white-space: normal;
+}
+
+#content .hero-title .diff-vs {
+    color: var(--fg-3);
+    margin: 0 0.4rem;
+}
+
+#content .hero-title .diff-link {
+    margin-left: 0.6rem;
+    text-transform: lowercase;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    color: var(--teal-lit);
+}
+
+#content .hero-title .diff-link:hover {
+    text-decoration: underline;
+}
+
+
+
+#content .hero-actions {
+    margin-top: 0.7rem;
+    flex-wrap: wrap;
+}
+
+/* Index test list. The info column soaks up the leftover width, and is
+ * clamped so a long note cannot make one row tower over the rest. */
+
+#content .test-list {
+    width: 100%;
+}
+
+#content .test-list tr td.test-info {
+    width: 100%;
+    max-width: 0;
+    color: var(--fg-2);
+    font-size: 0.72rem;
+}
+
+#content .test-list tr td.test-info div {
+    max-height: 5.8em;
+    overflow: hidden;
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.45;
+}
+
+/* Dynamic summary and results tables. Numeric headers sit over their column,
+ * and the figures run a step smaller than the labels above them. */
+
+#content th.numeric {
+    text-align: right;
+}
+
+#content #summary-container td,
+#content #results td {
+    font-size: 0.78rem;
+}
+
+#content #summary-container td.numeric,
+#content #results td.numeric {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Test config table */
 
 #content .test-config {
-    font-size: 1.0rem;
+    font-size: 0.76rem;
 }
 
 #content .test-config .td-label {
-    color: var(--color-font1);
+    color: var(--fg-2);
+    font-family: var(--font-mono);
+    text-transform: lowercase;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    width: 1%;
+    padding-right: 1.4rem;
 }
 
-/* ??? */
-
-td pre {
-    margin: 0px;
-    padding: 0px;
+#content .test-config td {
+    padding: 5px 10px;
+    color: var(--fg-1);
+    vertical-align: top;
 }
 
-#content .error-message {
-    color: red;
+#content #config {
+    min-width: 0;
+    overflow-x: auto;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
 }
 
-#content .warning-message {
-    color: yellow;
+#content #config td {
+    border-bottom: 1px solid var(--line-soft);
 }
 
-#content .status-message {
-    color: green;
+#content #config tr:last-child td {
+    border-bottom: none;
 }
 
-#content .site-title {
-    color: var(--color-font3);
+#content #actions {
+    min-width: 0;
 }
+
+/* Separate the edit form from the copy buttons stacked above it */
+#content #actions .form {
+    margin-top: 0.9rem;
+}
+
+#content #results {
+    display: block;
+    width: 100%;
+}
+
+/* Networks page glyphs */
 
 #content .default-network {
-    color: var(--color-font3);
+    color: var(--teal);
     transform: scale(1.10);
 }
 
@@ -367,128 +830,16 @@ td pre {
 }
 
 #content .non-default-network {
-    color: var(--color-font1);
+    color: var(--fg-3);
     transform: scale(0.70);
 }
 
-
-#content .numeric {
-    text-align: right;
+td pre {
+    margin: 0;
+    padding: 0;
 }
 
-#content .branch_name {
-    font-style: italic;
-}
-
-#content .active-highlight {
-    border-left: 4px solid var(--color-font3);
-}
-
-/* Styles for screen widths less than 768px */
-@media (max-width: 767px) {
-    #sidebar {
-        flex-basis: 100%;
-        position: fixed;
-        top: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: var(--color1);
-        overflow-y: auto;
-        transition: transform cubic-bezier(0.82, 0.08, 0.1, 0.93) 0.3s;
-        transform: translateX(-100%);
-    }
-
-    body.sidebar-open #sidebar {
-        transform: none;
-    }
-
-    #sidebar-toggle {
-        display: flex;
-        padding: 10px;
-        color: var(--color-font1);
-        background-color: transparent;
-        border: none;
-        position: relative;
-        z-index: 10;
-        font-size: 2.2rem;
-    }
-
-    #content-parent {
-        height: auto;
-        flex-grow: 0;
-        flex-basis: 100%;
-        padding: 0 8px;
-    }
-
-    #content {
-        overflow-x: hidden;
-        margin-top: 70px;
-    }
-
-    #content-header {
-        display: flex;
-        align-items: center;
-        background-color: var(--color1);
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: 10;
-    }
-
-    #content-header h2 {
-        /* Adjust the font size to the screen width, ensuring that the title doesn't overflow */
-        font-size: clamp(1.0rem, 4.8vw, 1.4rem);
-        margin: 8px 0;
-    }
-
-    #content-header .site-title {
-        white-space: break-spaces;
-    }
-
-    body {
-        flex-direction: column;
-    }
-
-    /* Disable vertical body scrolling when the sidebar is open */
-    body.sidebar-open {
-        position: fixed;
-        overflow-y: hidden;
-    }
-
-    /* Horizontally scrollable table */
-    table {
-        display: block;
-        overflow-x: auto;
-    }
-
-    /* Tables cannot break words to avoid issues such as single-letter lines */
-    /* The only exception is the test config table */
-    #content .wrappable:not(.workload-container .test-config) td {
-        word-break: normal;
-    }
-
-    /* Test Views */
-    .workload-container {
-        display: flex;
-        flex-direction: column;
-    }
-
-    #content #actions {
-        order: -1;
-        margin: 0 0 1rem 0;
-    }
-
-    #content #config {
-        float: none;
-    }
-
-    #content .long-statblock {
-        overflow-x: auto;
-    }
-}
-
-
-/* On-hover for long engine options in workloads */
+/* Engine option popovers */
 
 #content .engine-options {
     position: relative;
@@ -501,9 +852,340 @@ td pre {
 #content .engine-options-popup {
     display: none;
     position: absolute;
+    z-index: 5;
     padding: 8px 12px;
-    background-color: #000;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    background-color: var(--bg-deep);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+    color: var(--fg-1);
 }
 
+/* LLR history graph */
+
+#content .llr-history-label {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    color: var(--teal);
+    margin: 0 0 0.35rem 2px;
+}
+
+#content .llr-history-widget {
+    position: relative;
+    display: inline-block;
+}
+
+#content .llr-history-chart {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+#content .llr-history-yaxis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.1rem 0 0.9rem;
+    width: 32px;
+    color: var(--fg-3);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+#content .llr-history-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+#content .llr-history-plot {
+    position: relative;
+}
+
+#content .llr-history-graph {
+    display: block;
+    width: 280px;
+    height: 96px;
+    max-width: 100%;
+}
+
+#content .llr-history-xaxis {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.15rem;
+    color: var(--fg-3);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+#content .llr-history-graph .llr-bg {
+    fill: var(--bg-1);
+    stroke: var(--line);
+    stroke-width: 1;
+}
+
+#content .llr-history-graph .llr-grid {
+    stroke: rgba(219, 222, 225, 0.06);
+    stroke-width: 1;
+}
+
+#content .llr-history-graph .llr-bound {
+    stroke: rgba(63, 162, 185, 0.55);
+    stroke-dasharray: 4 3;
+    stroke-width: 1;
+}
+
+#content .llr-history-graph .llr-bound-label {
+    fill: rgba(134, 194, 213, 0.7);
+    font-family: inherit;
+    font-size: 8px;
+    font-variant-numeric: tabular-nums;
+}
+
+#content .llr-history-graph .llr-zero {
+    stroke: rgba(219, 222, 225, 0.28);
+    stroke-width: 1;
+}
+
+#content .llr-history-graph .llr-path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.9;
+    vector-effect: non-scaling-stroke;
+}
+
+#content .llr-history-graph .llr-path-pos    { stroke: var(--stat-green);  }
+#content .llr-history-graph .llr-path-yellow { stroke: var(--stat-yellow); }
+#content .llr-history-graph .llr-path-neg    { stroke: var(--stat-red);    }
+
+#content .llr-history-graph .llr-fill-pos    { color: var(--stat-green);  }
+#content .llr-history-graph .llr-fill-yellow { color: var(--stat-yellow); }
+#content .llr-history-graph .llr-fill-neg    { color: var(--stat-red);    }
+
+#content .llr-history-graph .llr-endpoint {
+    fill: currentColor;
+    stroke: var(--bg-1);
+    stroke-width: 1;
+}
+
+#content .llr-history-graph .llr-endpoint-grp {
+    animation: llr-fadein 0.35s ease-out 0.5s both;
+}
+
+#content .llr-history-graph .llr-endpoint-halo {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.3;
+    vector-effect: non-scaling-stroke;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: llr-pulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+#content .llr-history-graph .llr-reveal {
+    transform-origin: 0 0;
+    animation: llr-draw 0.6s ease-out;
+}
+
+#content .llr-history-graph .llr-hover-line {
+    stroke: var(--fg-1);
+    stroke-dasharray: 2 2;
+    stroke-width: 1;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#content .llr-history-graph .llr-hover-point {
+    fill: var(--bg-1);
+    stroke: var(--fg-1);
+    stroke-width: 1.5;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#content .llr-history-graph .llr-hover-line.active,
+#content .llr-history-graph .llr-hover-point.active {
+    opacity: 0.9;
+}
+
+#content .llr-history-graph .llr-hover-point.pos    { stroke: var(--stat-green);  }
+#content .llr-history-graph .llr-hover-point.yellow { stroke: var(--stat-yellow); }
+#content .llr-history-graph .llr-hover-point.neg    { stroke: var(--stat-red);    }
+
+#content .llr-history-graph .llr-hitbox {
+    fill: transparent;
+    cursor: crosshair;
+}
+
+#content .llr-history-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 4px 8px 3px;
+    background-color: var(--bg-deep);
+    border: 1px solid var(--teal-deep);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+    color: var(--fg-1);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+#content .llr-history-tooltip.active {
+    opacity: 1;
+}
+
+@keyframes llr-draw   { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes llr-fadein { from { opacity: 0;          } to { opacity: 1;           } }
+@keyframes llr-pulse  {
+    0%   { transform: scale(1);   opacity: 0.5; }
+    70%  {                        opacity: 0;   }
+    100% { transform: scale(2.4); opacity: 0;   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #content .llr-history-graph .llr-reveal,
+    #content .llr-history-graph .llr-endpoint-grp,
+    #content .llr-history-graph .llr-endpoint-halo { animation: none; }
+}
+
+/* Below this the two columns squeeze the config table into wrapping mid-URL,
+ * so the grid drops to a single column well before the mobile breakpoint. */
+
+@media (max-width: 1023px) {
+    #content .workload-grid {
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    #content #actions {
+        max-width: none;
+    }
+}
+
+/* Narrow screens */
+
+@media (max-width: 767px) {
+
+    #sidebar {
+        flex-basis: 100%;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: var(--bg-panel);
+        overflow-y: auto;
+        transition: transform cubic-bezier(0.82, 0.08, 0.1, 0.93) 0.3s;
+        transform: translateX(-100%);
+        z-index: 20;
+    }
+
+    body.sidebar-open #sidebar {
+        transform: none;
+    }
+
+    #sidebar-toggle {
+        display: flex;
+        padding: 10px;
+        color: var(--fg-1);
+        background-color: transparent;
+        border: none;
+        position: relative;
+        z-index: 10;
+        font-size: 2.0rem;
+        cursor: pointer;
+    }
+
+    #content-parent {
+        height: auto;
+        flex-grow: 0;
+        flex-basis: 100%;
+        padding: 0 8px;
+    }
+
+    #content {
+        overflow-x: hidden;
+        margin-top: 66px;
+    }
+
+    #content-header {
+        display: flex;
+        align-items: center;
+        background-color: var(--bg-deep);
+        border-bottom: 1px solid var(--line);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 0 6px;
+        z-index: 10;
+    }
+
+    #content-header h2 {
+        display: block;
+        font-size: clamp(1.0rem, 4.8vw, 1.4rem);
+        margin: 8px 0;
+    }
+
+    #content-header .site-title {
+        white-space: break-spaces;
+    }
+
+    body {
+        flex-direction: column;
+    }
+
+    body.sidebar-open {
+        position: fixed;
+        overflow-y: hidden;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    #content .wrappable:not(.workload-container .test-config) td {
+        word-break: normal;
+    }
+
+    .workload-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #content .workload-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #content #actions {
+        margin: 0 0 1rem 0;
+        width: 100%;
+        max-width: none;
+    }
+
+    #content #config {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+
+
+    #content .llr-history-graph {
+        width: 100%;
+    }
+
+    #content .test-list tr td.test-info {
+        display: none;
+    }
+}
