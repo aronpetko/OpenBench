@@ -11,6 +11,12 @@
     <script src="{% static 'llr_history.js' %}?{{ static_version }}"></script>
 
     <script>
+        setTimeout(function() {
+            location.reload();
+        }, 60000); 
+    </script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetch_summary({{workload.id}});
             init_llr_history_widgets();

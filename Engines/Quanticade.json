@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 650000,
+    "nps"     : 850000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
@@ -43,7 +43,7 @@
             "both_options"      : "Threads=1 Hash=16 Minimal=true",
             "both_time_control" : "10.0+0.10",
             "workload_size"     : 32,
-            "test_bounds"       : "[-2.00, 0.00]",
+            "test_bounds"       : "[-3.00, 1.00]",
             "test_confidence"   : "[0.05, 0.05]"
         },
 
@@ -51,7 +51,7 @@
             "both_options"      : "Threads=1 Hash=128 Minimal=true",
             "both_time_control" : "60.0+0.6",
             "workload_size"     : 8,
-            "test_bounds"       : "[-2.00, 0.00]",
+            "test_bounds"       : "[-3.00, 1.00]",
             "test_confidence"   : "[0.05, 0.05]"
         },
 
@@ -80,19 +80,20 @@
     "datagen_presets" : {
 
         "default" : {
-            "win_adj"       : "None",
-            "draw_adj"      : "None",
+            "book_name"     : "UHO_Lichess_4852_v1.epd",
+            "win_adj"       : "movecount=5 score=2000",
+            "draw_adj"      : "movenumber=32 movecount=6 score=10",
             "workload_size" : 128
         },
 
         "5k Nodes" : {
-            "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
+            "both_options"      : "Threads=1 Hash=16 DisableNormalization=true SoftNodes=true Minimal=true",
             "both_time_control" : "N=5000"
         },
 
-        "20k Nodes" : {
-            "both_options"      : "Threads=1 Hash=16 HashNodes=10000000",
-            "both_time_control" : "N=20000"
+        "25k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 DisableNormalization=true SoftNodes=true Minimal=true",
+            "both_time_control" : "N=25000"
         }
     }
 }

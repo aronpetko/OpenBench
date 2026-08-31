@@ -61,7 +61,7 @@
 
     "tune_presets": {
         "default": {
-            "book_name": "UHO_4060_v2.epd",
+            "book_name": "UHO_Lichess_4852_v1.epd",
             "win_adj": "movecount=3 score=400",
             "draw_adj": "movenumber=40 movecount=8 score=10"
         },
@@ -78,7 +78,7 @@
 
         "LTC": {
             "dev_options": "Threads=1 Hash=64 Minimal=true",
-            "dev_time_control": "40+0.0.4"
+            "dev_time_control": "40+0.4"
         },
 
         "VLTC": {
@@ -89,7 +89,7 @@
         
         "LTC [4T]": {
             "dev_options": "Threads=4 Hash=256 Minimal=true",
-            "dev_time_control": "40+0.0.4"
+            "dev_time_control": "40+0.4"
         }
     },
 
