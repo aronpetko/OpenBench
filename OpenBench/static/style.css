@@ -577,6 +577,12 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .btn-yellow:hover { background-color: var(--btn-yellow-h); border-color: var(--btn-yellow-h); }
 #content .btn-red:hover    { background-color: var(--btn-red-h);    border-color: var(--btn-red-h);    }
 
+/* A full-width button is a block: left inline, it picks up the line box of
+   the whitespace around it, which is what padded out the SPSA digest cell */
+#content .anchorbutton.w-100 {
+    display: block;
+}
+
 #content .btn-disabled {
     background-color: var(--btn-off);
     border-color: var(--line);
@@ -721,7 +727,9 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content #config       { grid-column: 1; grid-row: 2; }
 #content #actions      { grid-column: 2; grid-row: 2; }
 
-#content .workload-grid.no-graph #actions { grid-row: 1; }
+/* Spanning, not just starting at row 1: parked in row 1 alone, the tall edit
+   column sets that row's height and strands the config table below it. */
+#content .workload-grid.no-graph #actions { grid-row: 1 / span 2; }
 
 /* Flex, so the branch names and the diff link share one even gap. Baseline
  * alignment, so the smaller diff link sits on the same line as the names
