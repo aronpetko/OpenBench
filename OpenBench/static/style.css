@@ -614,6 +614,15 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 /* Stat blocks */
 
+/* The rows are laid out with real newlines and padding spaces, and
+   HTML_MINIFY collapses both. A <pre> is on the minifier's preserve list, so
+   the block survives in production the way the workload page's already did. */
+#content .statblock pre {
+    margin: 0;
+    font: inherit;
+    color: inherit;
+}
+
 #content .statblock {
     white-space: pre;
     font-size: 0.72rem;

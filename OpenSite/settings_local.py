@@ -25,8 +25,10 @@ from OpenSite.settings import *
 
 DEBUG = True
 
-# Serve readable HTML, so the page source is inspectable while styling
-HTML_MINIFY = False
+# Left on, matching production. Turning it off here once hid a bug where the
+# minifier collapsed the whitespace a stat block is laid out with, so the page
+# was only ever broken on the live site.
+HTML_MINIFY = True
 
 DATABASES = {
     'default': {
