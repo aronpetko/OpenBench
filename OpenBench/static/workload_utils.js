@@ -21,8 +21,10 @@ function copy_text_from_element(element_id, keep_url, code_blocks=false) {
     // innerText, not innerHTML: stat blocks carry colour-coding spans, and
     // only the rendered text belongs on the clipboard. Hidden elements fall
     // back to textContent, which is what we want there.
+    // Trailing whitespace only: a full trim() would eat the leading spaces
+    // that align the first row of a stat block with the rows under it
     var element = document.getElementById(element_id);
-    var text = (element.innerText || element.textContent).trim();
+    var text = (element.innerText || element.textContent).replace(/\s+$/, '');
 
     if (code_blocks)
         text = "```\n" + text + "\n```";

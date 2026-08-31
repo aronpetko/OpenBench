@@ -28,10 +28,11 @@
          in one grid, so the two rows share a left and a right column. -->
 
     <h3 class="hero-title">
-            {{workload.dev.name|prettyName}}
-            {% if type == "TEST" or type == "DATAGEN" %}
-                <span class="diff-vs">vs</span>{{workload.base.name|prettyName}}
-            {% endif %}
+        <span class="branch">{{workload.dev.name|prettyName}}</span>
+        {% if type == "TEST" or type == "DATAGEN" %}
+            <span class="diff-vs">vs</span>
+            <span class="branch">{{workload.base.name|prettyName}}</span>
+        {% endif %}
         <a class="diff-link" href="{{workload|gitDiffLink}}">diff</a>
     </h3>
 
