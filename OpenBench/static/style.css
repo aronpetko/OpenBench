@@ -36,7 +36,7 @@
     /* Muted pastels: bright enough to keep near-black text legible, dim
        enough not to glare off the near-black page behind them */
     --stat-text  : #0A0C0D;
-    --stat-none  : #9BA3A8;
+    --stat-none  : #A8AFB4;
     --stat-green : #6FB07F;
     --stat-blue  : #79B3BE;
     --stat-yellow: #C0BC78;
@@ -82,6 +82,7 @@ body {
     color: var(--fg-2);
     font-size: 0.88rem;
     font-family: var(--font-mono);
+    font-weight: 500;
     font-feature-settings: "zero" 1;
     display: flex;
     min-height: 100vh;
@@ -561,21 +562,29 @@ html.sidebar-collapsed #sidebar ul + ul {
     filter: brightness(1.25);
 }
 
-#content .btn-blue     { background-color: var(--btn-blue);   }
-#content .btn-start    { background-color: var(--btn-start);  width: 100%; }
-#content .btn-preset   { background-color: var(--btn-preset); }
-#content .btn-yellow   { background-color: var(--btn-yellow); }
-#content .btn-red      { background-color: var(--btn-red);    }
+/* Every button carries an outline a step lighter than its own fill, so a
+   control reads as a control whatever colour it is. */
+
+#content .btn-blue     { background-color: var(--btn-blue);   border-color: var(--btn-blue-h);   }
+#content .btn-start    { background-color: var(--btn-start);  border-color: var(--btn-start-h);  width: 100%; }
+#content .btn-preset   { background-color: var(--btn-preset); border-color: var(--btn-preset-h); }
+#content .btn-yellow   { background-color: var(--btn-yellow); border-color: var(--btn-yellow-h); }
+#content .btn-red      { background-color: var(--btn-red);    border-color: var(--btn-red-h);    }
 
 #content .btn-blue:hover   { background-color: var(--btn-blue-h);   border-color: var(--teal-deep); }
 #content .btn-start:hover  { background-color: var(--btn-start-h);  border-color: var(--teal-deep); }
-#content .btn-preset:hover { background-color: var(--btn-preset-h); }
-#content .btn-yellow:hover { background-color: var(--btn-yellow-h); }
-#content .btn-red:hover    { background-color: var(--btn-red-h);    }
+#content .btn-preset:hover { background-color: var(--btn-preset-h); border-color: var(--btn-preset-h); }
+#content .btn-yellow:hover { background-color: var(--btn-yellow-h); border-color: var(--btn-yellow-h); }
+#content .btn-red:hover    { background-color: var(--btn-red-h);    border-color: var(--btn-red-h);    }
 
 #content .btn-disabled {
     background-color: var(--btn-off);
+    border-color: var(--line);
     color: var(--fg-3);
+}
+
+#content .btn-disabled:hover {
+    border-color: var(--line);
 }
 
 #content .btn-disabled:hover {
@@ -600,6 +609,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 /* Stat blocks */
 
 #content .statblock {
+    white-space: pre;
     font-size: 0.72rem;
     color: var(--stat-text);
     line-height: 1.4;
@@ -608,6 +618,15 @@ html.sidebar-collapsed #sidebar ul + ul {
     border-radius: var(--radius-sm);
     padding: 6px 10px;
 }
+
+/* Inside a badge the ground already carries the signal, so the text stays
+   near-black throughout: weight separates the label, and only the trailing
+   units step back at all. A grey ramp over a pastel just reads as muddy. */
+
+#content .statblock .sb-label { color: var(--stat-text); font-weight: 700; }
+#content .statblock .sb-value { color: var(--stat-text); }
+#content .statblock .sb-dim   { color: var(--stat-text); }
+#content .statblock .sb-unit  { color: rgba(0, 0, 0, 0.72); }
 
 #content .statblock-green  { background-color: var(--stat-green);  }
 #content .statblock-blue   { background-color: var(--stat-blue);   }
@@ -692,6 +711,17 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .hero-graph {
     min-width: 0;
 }
+
+/* Explicit placement, so a workload with no graph (tunes, and anything not
+   running an SPRT) lets the edit column climb into the empty top-right cell
+   rather than starting a row below the summary. */
+
+#content .hero-summary { grid-column: 1; grid-row: 1; }
+#content .hero-graph   { grid-column: 2; grid-row: 1; }
+#content #config       { grid-column: 1; grid-row: 2; }
+#content #actions      { grid-column: 2; grid-row: 2; }
+
+#content .workload-grid.no-graph #actions { grid-row: 1; }
 
 /* Flex, so the branch names and the diff link share one even gap. Baseline
  * alignment, so the smaller diff link sits on the same line as the names
@@ -1063,6 +1093,15 @@ td pre {
     #content .workload-grid {
         grid-template-columns: minmax(0, 1fr);
         width: 100%;
+    }
+
+    #content .hero-summary,
+    #content .hero-graph,
+    #content #config,
+    #content #actions,
+    #content .workload-grid.no-graph #actions {
+        grid-column: auto;
+        grid-row: auto;
     }
 
     #content #actions {

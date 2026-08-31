@@ -12,6 +12,15 @@ instance, so the UI can be worked on without a database server:
 Nothing here is used in production; OpenSite.settings remains the default.
 """
 
+import os
+
+# OpenSite.settings refuses to import without its secrets, by design. Local
+# development has no production env file, so stand in throwaway values before
+# importing: the key is never used to sign anything that leaves this machine,
+# and the database password is unused because SQLite replaces MySQL below.
+os.environ.setdefault('OPENBENCH_SECRET_KEY', 'local-development-key-not-secret')
+os.environ.setdefault('OPENBENCH_DB_PASSWORD', 'unused-by-sqlite')
+
 from OpenSite.settings import *
 
 DEBUG = True

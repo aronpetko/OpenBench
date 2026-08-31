@@ -42,7 +42,7 @@
         <a class="diff-link" href="{{workload|gitDiffLink}}">diff</a>
     </h3>
 
-    <div class="workload-grid">
+    <div class="workload-grid{% if not type == "TEST" or not workload.test_mode == "SPRT" %} no-graph{% endif %}">
 
         <div class="hero-summary">
 
@@ -50,7 +50,7 @@
                 {% if type == "TEST" or type == "DATAGEN" %}
                     <pre class="long-statblock" id="long-statblock">{{workload|longStatBlockHTML}}</pre>
                 {% elif type == "TUNE" %}
-                    <pre class="long-statblock" id="long-statblock">{{workload|shortStatBlock}}</pre>
+                    <pre class="long-statblock" id="long-statblock">{{workload|shortStatBlockHTML}}</pre>
                 {% endif %}
 
                 {% if workload.info %}
@@ -110,8 +110,6 @@
                 <div class="llr-history-label">LLR History</div>
                 {{workload|llr_history_graph}}
             </div>
-        {% else %}
-            <div></div>
         {% endif %}
 
     <div id="config">

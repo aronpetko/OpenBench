@@ -468,11 +468,14 @@ register.filter('llr_history_graph', llr_history_graph)
 
 ## Stat Blocks, laid out as a labelled table
 ##
-## Same numbers as longStatBlock, but with the label in its own gutter and
-## each figure annotated with what it actually is, so the block
-## reads without having to remember the column order. Values are white,
-## groupings and units grey, labels teal. The copy buttons read innerText,
-## so what lands on the clipboard is exactly what is on screen.
+## The same rows back both the workload page and the index list, so a result
+## reads identically wherever you meet it. Each row is a label in its own
+## gutter followed by figures annotated with what they are. Values are the
+## strongest tone, groupings weaker, units weakest; the index badge restates
+## those three tones against its pastel background.
+##
+## The copy buttons read innerText, so the clipboard gets exactly what is on
+## screen, alignment included.
 
 PENTA_MARKS = ['\u207b\u00b2', '\u207b\u00b9', '\u2070', '\u207a\u00b9', '\u207a\u00b2']
 
@@ -482,6 +485,78 @@ def _sb(css_class, text):
 def _sb_row(label, body):
     return _sb('sb-label', '%-5s' % (label)) + '  ' + body
 
+def _sb_llr_row(test):
+    return _sb_row('LLR',
+        _sb('sb-value', '%+0.2f' % (test.currentllr))
+      + _sb('sb-dim'  , '  (%+0.2f, %+0.2f)' % (test.lowerllr, test.upperllr))
+      + _sb('sb-unit' , ' bounds')
+      + _sb('sb-dim'  , '  [%0.2f, %0.2f]' % (test.elolower, test.eloupper))
+      + _sb('sb-unit' , ' elo'))
+
+def _sb_elo_row(test, note=''):
+    lower, elo, upper = OpenBench.stats.Elo(test.results())
+    return _sb_row('ELO',
+        _sb('sb-value', '%+0.2f' % (elo))
+      + _sb('sb-dim'  , ' \u00b1 ')
+      + _sb('sb-value', '%0.2f' % (max(upper - elo, elo - lower)))
+      + _sb('sb-dim'  , '  (%+0.2f, %+0.2f)' % (lower, upper))
+      + _sb('sb-unit' , ' 95%' + note))
+
+def _sb_conf_row(test):
+    threads     = int(OpenBench.utils.extract_option(test.dev_options, 'Threads'))
+    hashmb      = int(OpenBench.utils.extract_option(test.dev_options, 'Hash'))
+    timecontrol = test.dev_time_control + ['s', '']['=' in test.dev_time_control]
+
+    return _sb_row('CONF',
+        _sb('sb-value', timecontrol)
+      + _sb('sb-dim'  , ' \u00b7 ')
+      + _sb('sb-value', '%d' % (threads))
+      + _sb('sb-unit' , ' thread' + ('s' if threads != 1 else ''))
+      + _sb('sb-dim'  , ' \u00b7 ')
+      + _sb('sb-value', '%d' % (hashmb))
+      + _sb('sb-unit' , ' mb hash'))
+
+def _sb_games_row(test, note=''):
+    games, wins, losses, draws = test.as_nwld()
+    share = lambda n : (100.0 * n / games) if games else 0.0
+
+    counts = ''
+    for name, value in (('W', wins), ('D', draws), ('L', losses)):
+        if counts: counts += _sb('sb-dim', '  ')
+        counts += (_sb('sb-dim'  , '%0.1f%% ' % (share(value)))
+                 + _sb('sb-value', insertCommas(value))
+                 + _sb('sb-unit' , name))
+
+    return _sb_row('GAMES',
+        _sb('sb-value', insertCommas(games))
+      + _sb('sb-unit' , note)
+      + _sb('sb-dim'  , '  (') + counts + _sb('sb-dim', ')'))
+
+def _sb_penta_row(test):
+    penta = _sb('sb-dim', '[')
+    for i, value in enumerate(test.as_penta()):
+        if i: penta += _sb('sb-dim', '  ')
+        penta += _sb('sb-value', insertCommas(value)) + _sb('sb-unit', PENTA_MARKS[i])
+    return _sb_row('PENTA', penta + _sb('sb-dim', ']'))
+
+def _sb_spsa_rows(test):
+    spsa_run   = test.spsa_run # Avoid extra database accesses
+    iterations = test.games // (2 * spsa_run.pairs_per) if spsa_run.pairs_per else 0
+    total      = 2 * spsa_run.iterations * spsa_run.pairs_per
+
+    return [
+        _sb_row('TUNE', _sb('sb-value', '%d' % (spsa_run.parameters.count()))
+                      + _sb('sb-unit' , ' parameters')),
+
+        _sb_row('ITER', _sb('sb-value', insertCommas(iterations))
+                      + _sb('sb-dim'  , ' / ')
+                      + _sb('sb-value', insertCommas(spsa_run.iterations))),
+
+        _sb_row('GAMES', _sb('sb-value', insertCommas(test.games))
+                       + _sb('sb-dim'  , ' / ')
+                       + _sb('sb-value', insertCommas(total))),
+    ]
+
 def longStatBlockHTML(test):
 
     assert test.test_mode != 'SPSA'
@@ -489,56 +564,38 @@ def longStatBlockHTML(test):
     lines = []
 
     if test.test_mode == 'SPRT':
-        lines.append(_sb_row('LLR',
-            _sb('sb-value', '%+0.2f' % (test.currentllr))
-          + _sb('sb-dim'  , '  (%+0.2f, %+0.2f)' % (test.lowerllr, test.upperllr))
-          + _sb('sb-unit' , ' bounds')
-          + _sb('sb-dim'  , '  [%0.2f, %0.2f]' % (test.elolower, test.eloupper))
-          + _sb('sb-unit' , ' elo')))
+        lines.append(_sb_llr_row(test))
 
-    lower, elo, upper = OpenBench.stats.Elo(test.results())
-
-    lines.append(_sb_row('ELO',
-        _sb('sb-value', '%+0.2f' % (elo))
-      + _sb('sb-dim'  , ' \u00b1 ')
-      + _sb('sb-value', '%0.2f' % (max(upper - elo, elo - lower)))
-      + _sb('sb-dim'  , '  (%+0.2f, %+0.2f)' % (lower, upper))
-      + _sb('sb-unit' , ' 95%')))
-
-    threads     = int(OpenBench.utils.extract_option(test.dev_options, 'Threads'))
-    hashmb      = int(OpenBench.utils.extract_option(test.dev_options, 'Hash'))
-    timecontrol = test.dev_time_control + ['s', '']['=' in test.dev_time_control]
-
-    lines.append(_sb_row('CONF',
-        _sb('sb-value', timecontrol)
-      + _sb('sb-dim'  , '  \u00b7  ')
-      + _sb('sb-value', '%d' % (threads))
-      + _sb('sb-unit' , ' thread' + ('s' if threads != 1 else ''))
-      + _sb('sb-dim'  , '  \u00b7  ')
-      + _sb('sb-value', '%d' % (hashmb))
-      + _sb('sb-unit' , ' mb hash')))
-
-    games, wins, losses, draws = test.as_nwld()
-    share = lambda n : (100.0 * n / games) if games else 0.0
-
-    counts = ''
-    for name, value in (('w', wins), ('d', draws), ('l', losses)):
-        if counts: counts += _sb('sb-dim', '  ')
-        counts += (_sb('sb-dim'  , '%0.1f%% ' % (share(value)))
-                 + _sb('sb-value', insertCommas(value))
-                 + _sb('sb-unit' , name))
-
-    lines.append(_sb_row('GAMES',
-        _sb('sb-value', insertCommas(games))
-      + _sb('sb-dim'  , '  (') + counts + _sb('sb-dim', ')')))
+    lines.append(_sb_elo_row(test))
+    lines.append(_sb_conf_row(test))
+    lines.append(_sb_games_row(test))
 
     if test.use_penta:
-        penta = _sb('sb-dim', '[')
-        for i, value in enumerate(test.as_penta()):
-            if i: penta += _sb('sb-dim', '  ')
-            penta += _sb('sb-value', insertCommas(value)) + _sb('sb-unit', PENTA_MARKS[i])
-        lines.append(_sb_row('PENTA', penta + _sb('sb-dim', ']')))
+        lines.append(_sb_penta_row(test))
+
+    return mark_safe('\n'.join(lines))
+
+def shortStatBlockHTML(test):
+
+    ## The index list already has its own columns for the engine, branch and
+    ## time control, so the config row is left off here.
+
+    if test.test_mode == 'SPSA':
+        lines = _sb_spsa_rows(test)
+
+    elif test.test_mode == 'SPRT':
+        lines = [_sb_llr_row(test), _sb_elo_row(test), _sb_games_row(test)]
+
+    elif test.test_mode == 'DATAGEN':
+        lines = [_sb_games_row(test, ' generated'), _sb_elo_row(test)]
+
+    else: # GAMES
+        lines = [_sb_elo_row(test), _sb_games_row(test, ' of %s' % (insertCommas(test.max_games)))]
+
+    if test.test_mode != 'SPSA' and test.use_penta:
+        lines.append(_sb_penta_row(test))
 
     return mark_safe('\n'.join(lines))
 
 register.filter('longStatBlockHTML', longStatBlockHTML)
+register.filter('shortStatBlockHTML', shortStatBlockHTML)
