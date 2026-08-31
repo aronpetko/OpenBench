@@ -60,9 +60,6 @@
     --font-mono  : "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --font-ui    : "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-    --radius     : 8px;
-    --radius-sm  : 5px;
-
     /* Legacy aliases */
     --color1      : var(--bg-1);
     --color2      : var(--bg-2);
@@ -75,7 +72,7 @@
 /* Document */
 
 html {
-    font-size: 13.5px;
+    font-size: 16.2px;
     -webkit-text-size-adjust: 100%;
 }
 
@@ -121,8 +118,8 @@ a:hover {
 /* Sidebar */
 
 #sidebar {
-    padding: 18px 10px 28px 12px;
-    flex: 0 0 calc(min(224px, max(180px, 10%)));
+    padding: 19px 11px 30px 13px;
+    flex: 0 0 calc(min(242px, max(194px, 10%)));
     font-family: var(--font-ui);
     background-color: var(--bg-panel);
     border-right: 1px solid var(--line);
@@ -147,14 +144,14 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 0 6px 14px;
+    padding: 0 6px 15px;
     margin-bottom: 4px;
     border-bottom: 1px solid var(--line-soft);
 }
 
 #sidebar .brand img {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
 }
 
 #sidebar .brand .brand-name {
@@ -193,7 +190,7 @@ a:hover {
     gap: 8px;
     width: 100%;
     box-sizing: border-box;
-    padding: 5px 9px;
+    padding: 5px 10px;
     border-radius: var(--radius-sm);
     transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -266,9 +263,9 @@ a:hover {
 }
 
 html.sidebar-collapsed #sidebar {
-    flex-basis: 54px;
-    padding-left: 7px;
-    padding-right: 7px;
+    flex-basis: 58px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 html.sidebar-collapsed #sidebar .brand {
@@ -375,7 +372,7 @@ html.sidebar-collapsed #sidebar ul + ul {
     border-bottom: 1px solid var(--line-soft);
     font-family: var(--font-mono);
     font-size: 0.68rem;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.09em;
     text-transform: lowercase;
     color: var(--fg-2);
     white-space: normal;
@@ -390,7 +387,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .engine-line-item:not(:last-child)::after {
     content: "\2022";
     color: var(--teal-deep);
-    margin: 0 0.7rem 0 0.5rem;
+    margin: 0 0.45rem 0 0.3rem;
     letter-spacing: 0;
 }
 
@@ -432,11 +429,12 @@ html.sidebar-collapsed #sidebar ul + ul {
 }
 
 #content th, #content td {
-    padding: 5px 9px;
+    padding: 6px 11px;
 }
 
 #content td {
     color: var(--fg-2);
+    font-size: 0.78rem;
     border-bottom: 1px solid var(--line-soft);
 }
 
@@ -458,8 +456,8 @@ html.sidebar-collapsed #sidebar ul + ul {
     text-align: left;
     background-color: var(--bg-th);
     border-bottom: 1px solid var(--line);
-    padding-top: 6px;
-    padding-bottom: 5px;
+    padding-top: 7px;
+    padding-bottom: 6px;
 }
 
 #content .table-small-header th {
@@ -471,8 +469,8 @@ html.sidebar-collapsed #sidebar ul + ul {
     text-transform: lowercase;
     text-align: left;
     background-color: var(--bg-th);
-    padding-top: 5px;
-    padding-bottom: 4px;
+    padding-top: 6px;
+    padding-bottom: 5px;
 }
 
 #content .stripes tr:nth-child(odd):not(.table-header) {
@@ -544,13 +542,12 @@ html.sidebar-collapsed #sidebar ul + ul {
     font-family: var(--font-mono);
     font-weight: 500;
     text-transform: lowercase;
-    padding: 5px 9px;
+    padding: 6px 11px;
     border: 1px solid transparent;
     color: var(--fg-1);
     display: inline-block;
     text-align: center;
-    transition: background-color 0.18s ease, transform 0.08s ease, border-color 0.18s ease;
-    font-family: inherit;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     font-size: 0.74rem;
     letter-spacing: 0.02em;
     white-space: normal;
@@ -559,8 +556,9 @@ html.sidebar-collapsed #sidebar ul + ul {
     user-select: none;
 }
 
+/* Colours ease the way the sidebar links do; nothing travels on press */
 #content .anchorbutton:active {
-    transform: translateY(1px);
+    filter: brightness(1.25);
 }
 
 #content .btn-blue     { background-color: var(--btn-blue);   }
@@ -583,7 +581,10 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .btn-disabled:hover {
     background-color: var(--btn-off);
     cursor: not-allowed;
-    transform: none;
+}
+
+#content .btn-disabled:active {
+    filter: none;
 }
 
 #content .copy-button {
@@ -605,7 +606,7 @@ html.sidebar-collapsed #sidebar ul + ul {
     background-color: var(--stat-none);
     font-family: var(--font-mono);
     border-radius: var(--radius-sm);
-    padding: 5px 8px;
+    padding: 6px 10px;
 }
 
 #content .statblock-green  { background-color: var(--stat-green);  }
@@ -632,10 +633,10 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 /* Stat block: teal labels, values in white against grey supporting text */
 
-#content .sb-label { color: var(--teal);  }
-#content .sb-pipe  { color: var(--fg-3);  }
-#content .sb-dim   { color: var(--fg-2);  }
-#content .sb-value { color: var(--fg-1);  }
+#content .sb-label { color: var(--teal); }
+#content .sb-dim   { color: var(--fg-2); }
+#content .sb-unit  { color: var(--fg-3); }
+#content .sb-value { color: var(--fg-1); }
 
 /* Free-text note an approver can leave on a workload */
 
@@ -674,7 +675,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 #content .workload-grid {
     display: grid;
-    grid-template-columns: minmax(0, max-content) 340px;
+    grid-template-columns: minmax(0, max-content) 408px;
     gap: 0.7rem;
     align-items: start;
     width: fit-content;
@@ -692,7 +693,14 @@ html.sidebar-collapsed #sidebar ul + ul {
     min-width: 0;
 }
 
+/* Flex, so the branch names and the diff link share one even gap. Baseline
+ * alignment, so the smaller diff link sits on the same line as the names
+ * instead of floating above it the way centring leaves it. */
 #content .hero-title {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.55rem;
     margin: 0 0 0.6rem;
     font-size: 0.9rem;
     font-weight: 500;
@@ -702,11 +710,11 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 #content .hero-title .diff-vs {
     color: var(--fg-3);
-    margin: 0 0.4rem;
+    font-weight: 400;
 }
 
 #content .hero-title .diff-link {
-    margin-left: 0.6rem;
+    margin-left: 0.15rem;
     text-transform: lowercase;
     font-family: var(--font-ui);
     font-size: 0.78rem;
@@ -735,7 +743,6 @@ html.sidebar-collapsed #sidebar ul + ul {
     width: 100%;
     max-width: 0;
     color: var(--fg-2);
-    font-size: 0.72rem;
 }
 
 #content .test-list tr td.test-info div {
@@ -753,11 +760,6 @@ html.sidebar-collapsed #sidebar ul + ul {
     text-align: right;
 }
 
-#content #summary-container td,
-#content #results td {
-    font-size: 0.78rem;
-}
-
 #content #summary-container td.numeric,
 #content #results td.numeric {
     font-variant-numeric: tabular-nums;
@@ -765,15 +767,10 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 /* Test config table */
 
-#content .test-config {
-    font-size: 0.76rem;
-}
-
 #content .test-config .td-label {
     color: var(--fg-2);
     font-family: var(--font-mono);
     text-transform: lowercase;
-    font-size: 0.74rem;
     letter-spacing: 0.02em;
     white-space: nowrap;
     width: 1%;
@@ -781,7 +778,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 }
 
 #content .test-config td {
-    padding: 5px 10px;
+    padding: 6px 12px;
     color: var(--fg-1);
     vertical-align: top;
 }
@@ -853,7 +850,7 @@ td pre {
     display: none;
     position: absolute;
     z-index: 5;
-    padding: 8px 12px;
+    padding: 10px 14px;
     background-color: var(--bg-deep);
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
@@ -889,9 +886,9 @@ td pre {
     flex-direction: column;
     justify-content: space-between;
     padding: 0.1rem 0 0.9rem;
-    width: 32px;
+    width: 38px;
     color: var(--fg-3);
-    font-size: 10px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
@@ -909,8 +906,8 @@ td pre {
 
 #content .llr-history-graph {
     display: block;
-    width: 280px;
-    height: 96px;
+    width: 336px;
+    height: 115px;
     max-width: 100%;
 }
 
@@ -919,7 +916,7 @@ td pre {
     justify-content: space-between;
     padding: 0 0.15rem;
     color: var(--fg-3);
-    font-size: 10px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -1027,13 +1024,13 @@ td pre {
     position: absolute;
     top: 0;
     left: 0;
-    padding: 4px 8px 3px;
+    padding: 5px 10px 4px;
     background-color: var(--bg-deep);
     border: 1px solid var(--teal-deep);
     border-radius: var(--radius-sm);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
     color: var(--fg-1);
-    font-size: 11px;
+    font-size: 13px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     pointer-events: none;
