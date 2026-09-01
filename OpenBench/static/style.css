@@ -11,18 +11,24 @@
  * # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # */
 
 :root {
-    --bg-deep    : #0A0C0D;
-    --bg-1       : #0E1113;
-    --bg-2       : #14181A;
-    --bg-3       : #1D2225;
-    --bg-panel   : #0C0F10;
-    --bg-row-a   : #0B0E0F;
-    --bg-row-b   : #101416;
-    --bg-hover   : #171D20;
-    --bg-th      : #070809;
+    /* Every surface used to sit within twenty levels of the ground, so a panel
+       or a table read as the same darkness as the page behind it. The ground
+       and the table header stay put as the two dark anchors; everything that
+       is meant to look like a surface on top of them is lifted clear. */
 
-    --line       : #1C2226;
-    --line-soft  : #14191C;
+    --bg-deep    : #0A0C0D;   /* the page itself   */
+    --bg-th      : #070809;   /* table headers     */
+
+    --bg-row-a   : #111618;
+    --bg-panel   : #12181A;
+    --bg-1       : #151B1E;
+    --bg-row-b   : #171E21;
+    --bg-2       : #1C2326;
+    --bg-hover   : #202A2D;
+    --bg-3       : #283235;
+
+    --line       : #2C3639;
+    --line-soft  : #202729;
 
     --teal       : #3FA2B9;
     --teal-lit   : #86C2D5;
@@ -33,14 +39,41 @@
     --fg-2       : #8A9298;
     --fg-3       : #5E666C;
 
-    /* Muted pastels: bright enough to keep near-black text legible, dim
-       enough not to glare off the near-black page behind them */
-    --stat-text  : #0A0C0D;
+    /* One text ramp for every result block, verdict colours and pinstripes
+       alike: values in a near-white grey, the groupings and units a step
+       down from it. */
+    --stat-fg     : #E8EBED;
+    --stat-fg-dim : #B3BABE;
+
     --stat-none  : #A8AFB4;
-    --stat-green : #6FB07F;
-    --stat-blue  : #79B3BE;
-    --stat-yellow: #C0BC78;
-    --stat-red   : #D28F7E;
+
+    /* A running test has no verdict to colour, so instead of a flat pastel it
+       gets dark diagonal pinstripes -- the two tones are close enough to read
+       as one surface, and the texture says "in progress" on its own. */
+    --stat-open      : #222B2E;
+    --stat-open-alt  : #1B2124;
+
+    /* How far a result block is lifted toward white. The row bands set it, so
+       a badge shades with the row it sits in instead of cutting a flat shape
+       across the banding. Zero outside the list pages.
+
+       Kept gentle: every badge ground is dark now, and a fixed step toward
+       white moves a dark tone much further, in relative terms, than it moved
+       the pastels these replaced. */
+    --band-lift  : 0%;
+    --stat-green : #2E436C;
+    --stat-blue  : #317986;
+    --stat-yellow: #846536;
+    --stat-red   : #6E282B;
+
+    /* The verdict colours are grounds: dark, so near-white text sits on them.
+       A 2px line on a near-black chart wants the opposite, so the LLR graph
+       keeps its own green/yellow/red -- muted rather than full strength, so
+       the curve reads as a measurement and not as a warning light. */
+    --llr-pos    : #58BC70;
+    --llr-yellow : #BEB95F;
+    --llr-neg    : #C57C69;
+    --llr-mid    : #6E777D;
 
     --btn-blue     : #16262E;
     --btn-blue-h   : #1E3540;
@@ -57,6 +90,13 @@
     --radius     : 0px;
     --radius-sm  : 0px;
 
+    /* One cap for the whole site. The list pages used to run wider than the
+       reading column, but two widths means the engine line breaks in a
+       different place depending on which page you are on, and, now that the
+       column is centred, that it sits off-centre against the content beneath
+       it. Everything that spans the column reads this and centres on it. */
+    --column-max: 1040px;
+
     --font-mono  : "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --font-ui    : "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
@@ -72,12 +112,25 @@
 /* Document */
 
 html {
-    font-size: 16.2px;
+    font-size: 18.6px;
     -webkit-text-size-adjust: 100%;
+
+    /* Reserve the scrollbar's width even on a page short enough not to need
+       one, so the content column does not jump between pages. */
+    scrollbar-gutter: stable;
 }
 
 body {
     background-color: var(--bg-deep);
+
+    /* A fine chessboard behind the whole site, at the edge of visibility: it
+       should register as texture on an empty stretch of page and never compete
+       with anything in front of it. Two stops of a repeating conic gradient
+       give the checker with no asset to fetch, and the tile is the pair of
+       squares, so background-size is twice the square. */
+    background-image: repeating-conic-gradient(
+        rgba(255, 255, 255, 0.018) 0% 25%, transparent 0% 50%);
+    background-size: 32px 32px;
 
     color: var(--fg-2);
     font-size: 0.88rem;
@@ -119,22 +172,15 @@ a:hover {
 /* Sidebar */
 
 #sidebar {
-    padding: 19px 11px 30px 13px;
-    flex: 0 0 calc(min(242px, max(194px, 10%)));
+    padding: 22px 12.6px 34.5px 15px;
+    flex: 0 0 calc(min(278.3px, max(223px, 10%)));
     font-family: var(--font-ui);
     background-color: var(--bg-panel);
     border-right: 1px solid var(--line);
     z-index: 1;
 
-    /* The engine list is long, so the nav scrolls on its own and stays put
-       while the page moves underneath it */
-    position: sticky;
-    top: 0;
-    align-self: flex-start;
-    max-height: 100vh;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--bg-3) transparent;
+    /* No scroller of its own: the nav is part of the page and moves with it.
+       Stretching to the flex row keeps the panel behind short content. */
 }
 
 #sidebar-toggle {
@@ -144,15 +190,15 @@ a:hover {
 #sidebar .brand {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 0 6px 15px;
-    margin-bottom: 4px;
+    gap: 10.3px;
+    padding: 0 7px 17.2px;
+    margin-bottom: 4.6px;
     border-bottom: 1px solid var(--line-soft);
 }
 
 #sidebar .brand img {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
 }
 
 #sidebar .brand .brand-name {
@@ -172,7 +218,7 @@ a:hover {
 
 #sidebar ul {
     list-style-type: none;
-    padding: 0 4px 0 2px;
+    padding: 0 4.6px 0 2.3px;
     margin: 0.25rem 0 0.7rem;
     line-height: 1.45;
 }
@@ -188,10 +234,10 @@ a:hover {
     text-transform: lowercase;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     width: 100%;
     box-sizing: border-box;
-    padding: 5px 10px;
+    padding: 5.8px 11.5px;
     border-radius: var(--radius-sm);
     transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -225,7 +271,7 @@ a:hover {
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: lowercase;
-    padding: 0 10px 2px;
+    padding: 0 11.5px 2.3px;
     pointer-events: none;
 }
 
@@ -242,7 +288,7 @@ a:hover {
 #sidebar .brand-link {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10.3px;
     min-width: 0;
 }
 
@@ -253,7 +299,7 @@ a:hover {
     border-radius: var(--radius-sm);
     color: var(--fg-3);
     cursor: pointer;
-    padding: 5px 6px;
+    padding: 5.8px 7px;
     font-size: 0.889rem;
     transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -264,15 +310,15 @@ a:hover {
 }
 
 html.sidebar-collapsed #sidebar {
-    flex-basis: 58px;
-    padding-left: 8px;
-    padding-right: 8px;
+    flex-basis: 66.7px;
+    padding-left: 9px;
+    padding-right: 9px;
 }
 
 html.sidebar-collapsed #sidebar .brand {
     flex-direction: column;
-    gap: 6px;
-    padding: 0 0 12px;
+    gap: 7px;
+    padding: 0 0 14px;
 }
 
 html.sidebar-collapsed #sidebar .brand-text,
@@ -292,7 +338,7 @@ html.sidebar-collapsed #sidebar-collapse i {
 html.sidebar-collapsed #sidebar li a {
     justify-content: center;
     gap: 0;
-    padding: 6px 0;
+    padding: 7px 0;
 }
 
 /* Without the group headers, the lists need their own separators */
@@ -307,15 +353,15 @@ html.sidebar-collapsed #sidebar ul + ul {
 
     html.sidebar-collapsed #sidebar {
         flex-basis: 100%;
-        padding-left: 12px;
-        padding-right: 10px;
+        padding-left: 14px;
+        padding-right: 11.5px;
     }
 
     html.sidebar-collapsed #sidebar .brand { flex-direction: row; }
     html.sidebar-collapsed #sidebar .brand-text,
     html.sidebar-collapsed #sidebar .nav-label,
     html.sidebar-collapsed #sidebar .header { display: block; }
-    html.sidebar-collapsed #sidebar li a { justify-content: flex-start; gap: 8px; padding: 5px 9px; }
+    html.sidebar-collapsed #sidebar li a { justify-content: flex-start; gap: 9px; padding: 5.8px 10.3px; }
     html.sidebar-collapsed #sidebar ul + ul { border-top: none; padding-top: 0; }
 }
 
@@ -329,8 +375,20 @@ html.sidebar-collapsed #sidebar ul + ul {
     min-width: 0;
 }
 
+/* The three things that span the column: the header, the engine line and the
+   content. They share one cap and one centring, so their edges line up.
+   (Auto margins, not justify-self -- these are blocks inside a flex item,
+   where justify-self has no effect.) */
+
+#content,
+#content-header,
+.engine-line {
+    max-width: calc(min(100%, var(--column-max)));
+    margin-left: auto;
+    margin-right: auto;
+}
+
 #content {
-    max-width: calc(min(100%, 980px));
     width: 100%;
     white-space: nowrap;
     display: block;
@@ -354,20 +412,22 @@ html.sidebar-collapsed #sidebar ul + ul {
     white-space: normal;
 }
 
-#content .site-title {
+#content-header .site-title {
     color: var(--fg-1);
     letter-spacing: 0.01em;
 }
 
-#content .site-title:hover {
+#content-header .site-title:hover {
     color: var(--teal-lit);
 }
 
-/* The engines developed on this instance, as one static line under the
- * heading. Wraps rather than scrolls; there is nothing to animate. */
+/* The engines developed on this instance, as one line under the heading.
+ * Authored as the full bulleted list, which is what shows without
+ * JavaScript; the script turns it into the marquee further down. */
 
-#content .engine-line {
-    margin: 0.4rem 0 1.2rem;
+.engine-line {
+    margin-top: 0.4rem;
+    margin-bottom: 1.2rem;
     padding: 0.35rem 0;
     border-top: 1px solid var(--line-soft);
     border-bottom: 1px solid var(--line-soft);
@@ -380,16 +440,85 @@ html.sidebar-collapsed #sidebar ul + ul {
     line-height: 1.9;
 }
 
-#content .engine-line-label {
+/* The label reads as a lead-in rather than another item in the list, so it
+   gets plain space after it instead of a bullet of its own. */
+.engine-line-label {
     color: var(--fg-3);
+    margin-right: 0.8rem;
 }
 
-#content .engine-line-label::after,
-#content .engine-line-item:not(:last-child)::after {
+.engine-line-item:not(:last-child)::after {
     content: "\2022";
     color: var(--teal-deep);
-    margin: 0 0.45rem 0 0.3rem;
+    margin: 0 0.5rem;
     letter-spacing: 0;
+}
+
+/* Marquee form, switched on by the script. The full bulleted list slides
+ * rightwards through the width of the column, so it keeps the height of a
+ * single row however many engines are listed. A second copy of the list
+ * follows the first, and the animation ends exactly where the copy starts,
+ * which is what makes the loop seamless. */
+
+.engine-line.is-carousel {
+    display: flex;
+    justify-content: center;
+    /* Centre rather than baseline: the slot clips its overflow, so its
+       baseline is its bottom edge and would drop the label. Both boxes are
+       one line-height tall, so centring lines the text up. */
+    align-items: center;
+    white-space: nowrap;
+}
+
+.engine-line.is-carousel .engine-carousel {
+    /* Shrink to the list while it fits, so a short list stays centred */
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.engine-line.is-carousel.is-scrolling .engine-carousel {
+    /* Scrolling: take the rest of the row and clip, with the ends faded out
+       so names arrive and leave rather than popping at a hard edge */
+    flex: 1 1 auto;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
+}
+
+.engine-line.is-carousel .engine-track {
+    display: flex;
+    width: max-content;
+}
+
+.engine-line.is-carousel.is-scrolling .engine-track {
+    animation: engine-marquee linear infinite;
+}
+
+.engine-line.is-carousel.is-scrolling .engine-carousel:hover .engine-track {
+    animation-play-state: paused;
+}
+
+/* While it scrolls, each copy ends with a bullet of its own, so the seam
+   between the two reads as just another separator. A list that fits keeps the
+   authored form, with no bullet hanging off the end. */
+.engine-line.is-carousel.is-scrolling .engine-line-item::after {
+    content: "\2022";
+    color: var(--teal-deep);
+    margin: 0 0.5rem;
+    letter-spacing: 0;
+}
+
+/* The track is two identical copies, so -50% is exactly one copy wide:
+   starting there and ending at 0 slides the list rightwards */
+@keyframes engine-marquee {
+    from { transform: translateX(-50%); }
+    to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .engine-line.is-carousel .engine-track {
+        animation: none;
+    }
 }
 
 /* Flash messages */
@@ -430,13 +559,12 @@ html.sidebar-collapsed #sidebar ul + ul {
 }
 
 #content th, #content td {
-    padding: 6px 11px;
+    padding: 7px 12.6px;
 }
 
 #content td {
     color: var(--fg-2);
     font-size: 0.78rem;
-    border-bottom: 1px solid var(--line-soft);
 }
 
 #content .table-header th:first-child {
@@ -451,27 +579,26 @@ html.sidebar-collapsed #sidebar ul + ul {
     color: var(--teal);
     font-family: var(--font-ui);
     font-weight: 600;
-    font-size: 0.64rem;
+    font-size: 0.74rem;
     letter-spacing: 0.14em;
     text-transform: lowercase;
     text-align: left;
     background-color: var(--bg-th);
-    border-bottom: 1px solid var(--line);
-    padding-top: 7px;
-    padding-bottom: 6px;
+    padding-top: 8px;
+    padding-bottom: 7px;
 }
 
 #content .table-small-header th {
     color: var(--fg-3);
     font-family: var(--font-ui);
     font-weight: 600;
-    font-size: 0.58rem;
+    font-size: 0.68rem;
     letter-spacing: 0.14em;
     text-transform: lowercase;
     text-align: left;
     background-color: var(--bg-th);
-    padding-top: 6px;
-    padding-bottom: 5px;
+    padding-top: 7px;
+    padding-bottom: 5.8px;
 }
 
 #content .stripes tr:nth-child(odd):not(.table-header) {
@@ -482,12 +609,49 @@ html.sidebar-collapsed #sidebar ul + ul {
     background-color: var(--bg-row-b);
 }
 
+/* The test list interleaves section and priority headers with its rows, so
+   nth-child counts those too and the alternation lands out of phase from one
+   section to the next. The template stamps the alternation on each row
+   instead, which keeps pending, active and finished tests all banded the same
+   way -- and with the rules between rows gone, the banding is what separates
+   one test from the next. */
+
+/* On the cells, not the row: a row background paints over the table's stripes
+   before the badge above it ever gets a chance to show them through. The
+   result cell is left out so it keeps its own verdict colour. */
+
+#content .test-list tr.row-a { --band-lift: 0%;  }
+#content .test-list tr.row-b { --band-lift: 5%;  }
+
+#content .test-list tr.row-a td:not(.statblock) { background-color: var(--bg-row-a); }
+#content .test-list tr.row-b td:not(.statblock) { background-color: var(--bg-row-b); }
+
+/* The gap between sections would otherwise be a window onto the stripes */
+#content .test-list .table-spacer th { background-color: var(--bg-deep); }
+
+/* Hover moves to the cells for the same reason, and skips the result cell so
+   the stripes and the verdict colours both survive the cursor. */
+#content .test-list tr:hover td:not(.statblock) { background-color: var(--bg-hover); }
+
 #content .stripes th {
     background-color: var(--bg-th);
 }
 
-#content .hoverable tr:not(.table-header):not(.table-spacer):not(.table-spacer-small):hover {
+/* Rows fade in and out of the hover tint rather than snapping to it. The
+   transition sits on the resting state so it applies on the way out too. */
+#content .hoverable tr:not(.table-header):not(.table-spacer):not(.table-spacer-small),
+#content .test-list td {
+    transition: background-color 0.09s ease;
+}
+
+#content .hoverable:not(.test-list) tr:not(.table-header):not(.table-spacer):not(.table-spacer-small):hover {
     background-color: var(--bg-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #content .hoverable tr {
+        transition: none;
+    }
 }
 
 #content .wrappable td {
@@ -530,7 +694,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .anchor-container {
     display: flex;
     justify-content: space-between;
-    gap: 6px;
+    gap: 7px;
 }
 
 #content .anchor-container > .anchorbutton {
@@ -543,7 +707,7 @@ html.sidebar-collapsed #sidebar ul + ul {
     font-family: var(--font-mono);
     font-weight: 500;
     text-transform: lowercase;
-    padding: 6px 11px;
+    padding: 7px 12.6px;
     border: 1px solid transparent;
     color: var(--fg-1);
     display: inline-block;
@@ -626,27 +790,39 @@ html.sidebar-collapsed #sidebar ul + ul {
 #content .statblock {
     white-space: pre;
     font-size: 0.72rem;
-    color: var(--stat-text);
+    color: var(--stat-fg);
     line-height: 1.4;
-    background-color: var(--stat-none);
+    --stat-tone: var(--stat-none);
+    background-color: var(--stat-tone); /* fallback: no banding, flat tone */
+    background-color: color-mix(in srgb, #FFF var(--band-lift), var(--stat-tone));
     font-family: var(--font-mono);
     border-radius: var(--radius-sm);
-    padding: 6px 10px;
+    padding: 7px 11.5px;
 }
 
-/* Inside a badge the ground already carries the signal, so the text stays
-   near-black throughout: weight separates the label, and only the trailing
-   units step back at all. A grey ramp over a pastel just reads as muddy. */
+/* The same two greys whatever the ground underneath: the label and the
+   figures in the lighter one, the groupings and units a step down. Weight,
+   not hue, is what separates the label. */
 
-#content .statblock .sb-label { color: var(--stat-text); font-weight: 700; }
-#content .statblock .sb-value { color: var(--stat-text); }
-#content .statblock .sb-dim   { color: var(--stat-text); }
-#content .statblock .sb-unit  { color: rgba(0, 0, 0, 0.72); }
+#content .statblock .sb-label { color: var(--stat-fg);     font-weight: 700; }
+#content .statblock .sb-value { color: var(--stat-fg);     }
+#content .statblock .sb-dim   { color: var(--stat-fg-dim); }
+#content .statblock .sb-unit  { color: var(--stat-fg-dim); }
 
-#content .statblock-green  { background-color: var(--stat-green);  }
-#content .statblock-blue   { background-color: var(--stat-blue);   }
-#content .statblock-yellow { background-color: var(--stat-yellow); }
-#content .statblock-red    { background-color: var(--stat-red);    }
+/* An unfinished test: pinstripes rather than a verdict colour.
+
+   The stripes themselves are on the table, so the badge only has to stay out
+   of the way: transparent on the darker band, and a thin white veil on the
+   lighter one, which tints the sheet showing through by the same amount the
+   verdict colours are lifted. */
+#content .statblock- {
+    background: rgba(255, 255, 255, var(--band-lift));
+}
+
+#content .statblock-green  { --stat-tone: var(--stat-green);  }
+#content .statblock-blue   { --stat-tone: var(--stat-blue);   }
+#content .statblock-yellow { --stat-tone: var(--stat-yellow); }
+#content .statblock-red    { --stat-tone: var(--stat-red);    }
 
 #content .redlink {
     color: #FF6F6F;
@@ -675,7 +851,13 @@ html.sidebar-collapsed #sidebar ul + ul {
 /* Free-text note an approver can leave on a workload */
 
 #content .workload-info {
-    max-width: 62ch;
+    /* Fills the column without also sizing it. The hero sits in a max-content
+       grid column, so a note left on one line would otherwise stretch the
+       column to its full unwrapped length; a zero width keeps it out of that
+       measurement, and the min-width then pulls it back out to the edge. */
+    box-sizing: border-box;
+    width: 0;
+    min-width: 100%;
     margin-top: 0.7rem;
     padding: 0.55rem 0.85rem 0.55rem calc(0.85rem - 1px);
     border-left: 2px solid var(--teal-deep);
@@ -709,7 +891,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 
 #content .workload-grid {
     display: grid;
-    grid-template-columns: minmax(0, max-content) 408px;
+    grid-template-columns: minmax(0, max-content) 469px;
     gap: 0.7rem;
     align-items: start;
     width: fit-content;
@@ -779,25 +961,128 @@ html.sidebar-collapsed #sidebar ul + ul {
     flex-wrap: wrap;
 }
 
+/* The engine and the author of a test are one fact, so they share a cell: the
+ * engine leads, and the name sits under it as the quieter second line. */
+
+#content .test-list td.test-owner {
+    padding-left: 15px;
+    line-height: 1.3;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#content .test-owner .owner-engine {
+    display: block;
+    color: var(--fg-1);
+}
+
+#content .test-owner .owner-author {
+    display: block;
+    color: var(--fg-3);
+    font-size: 0.88em;
+}
+
+#content .test-owner .owner-author:hover {
+    color: var(--teal-lit);
+}
+
 /* Index test list. The info column soaks up the leftover width, and is
  * clamped so a long note cannot make one row tower over the rest. */
 
+/* The pinstripes for unfinished tests are painted here, once, rather than on
+   each badge. A repeating gradient is laid out per element, so consecutive
+   badges of differing heights break the diagonal at every row boundary no
+   matter how the pattern is anchored. Painted across the whole table it is one
+   continuous sheet that scrolls with the page; every other cell covers it with
+   an opaque row colour, leaving the unfinished badges as the only windows onto
+   it. */
 #content .test-list {
     width: 100%;
+    background: repeating-linear-gradient(-45deg,
+        var(--stat-open)     0    14px,
+        var(--stat-open-alt) 14px 28px);
 }
 
-#content .test-list tr td.test-info {
+/* Tighter than the general table padding: this table has the most columns on
+   the site, and the gutters are what push the result block away from the name
+   it belongs to. */
+#content .test-list th,
+#content .test-list td {
+    padding-left: 9px;
+    padding-right: 9px;
+}
+
+/* The note belongs to the test, so it sits under the branch it describes
+ * rather than in a column of its own at the far end of the row. This cell
+ * soaks up the leftover width; max-width: 0 stops a long note from setting
+ * the column's width, and the clamp keeps one row from towering over the
+ * rest. */
+
+#content .test-list tr td.test-branch {
     width: 100%;
-    max-width: 0;
-    color: var(--fg-2);
 }
 
-#content .test-list tr td.test-info div {
-    max-height: 5.8em;
+/* The name is never cut short and never wraps: the column is as wide as the
+   longest name in it, and the whole row runs on past the edge of a narrow
+   screen, where the wrapper around the table scrolls to reach it. */
+#content .test-list .branch-line {
+    display: block;
+}
+
+/* Right-aligned and never wrapped: the diff link ends flush at the cell's
+   right edge, so it still forms a clean column of its own, with the tags
+   running back from it on the same line. */
+#content .test-list td.test-flags {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+}
+
+#content .test-list .test-diff {
+    margin-left: 0.75rem;
+}
+
+/* Named, not starred: a reader should not have to remember what a coloured
+   asterisk meant. Colour alone separates them -- no chip, no border.
+   No font-size of its own either: at the cell's own size the tags share the
+   diff link's line box exactly, and sit level with it on the baseline without
+   any of the alignment coaxing a smaller size needs. */
+#content .test-flag {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+#content .test-flag + .test-flag {
+    margin-left: 0.55rem;
+}
+
+
+/* Colour groups the kind of thing a tag is; the words tell them apart. Both
+   odds tags share one tone because they are the same sort of fact. */
+
+#content .flag-crash { color: #C2575B; }   /* something went wrong    */
+#content .flag-smp   { color: #C9B45F; }   /* how the test is run     */
+#content .flag-odds  { color: #D89B58; }   /* the sides are not equal */
+#content .flag-frc   { color: #6FB07F; }   /* which chess is played   */
+
+/* Fills the column without also sizing it: the note is the one thing here
+   that wraps, and a long one left to its own measurement would stretch the
+   column to its full unwrapped length. A zero width keeps it out of that
+   measurement, and the min-width pulls it back out to the column's edge. */
+#content .test-list .test-info {
+    box-sizing: border-box;
+    width: 0;
+    min-width: 100%;
+    max-height: 4.4em;
+    margin-top: 0.15rem;
     overflow: hidden;
+    color: var(--fg-3);
+    font-size: 0.9em;
     white-space: normal;
     overflow-wrap: break-word;
-    line-height: 1.45;
+    line-height: 1.4;
 }
 
 /* Dynamic summary and results tables. Numeric headers sit over their column,
@@ -825,7 +1110,7 @@ html.sidebar-collapsed #sidebar ul + ul {
 }
 
 #content .test-config td {
-    padding: 6px 12px;
+    padding: 7px 14px;
     color: var(--fg-1);
     vertical-align: top;
 }
@@ -839,16 +1124,16 @@ html.sidebar-collapsed #sidebar ul + ul {
     padding: 0.5rem 0.75rem;
 }
 
-#content #config td {
-    border-bottom: 1px solid var(--line-soft);
-}
-
-#content #config tr:last-child td {
-    border-bottom: none;
-}
-
 #content #actions {
     min-width: 0;
+}
+
+/* Gaps live between the stacked buttons rather than on each one, so whichever
+   button a workload type happens to render first still sits flush with the top
+   of the stat block beside it. A tune, with the stat-block copies hidden, used
+   to start on a button carrying its own margin-top. */
+#content #actions .anchor-container + .anchor-container {
+    margin-top: 0.25rem;
 }
 
 /* Separate the edit form from the copy buttons stacked above it */
@@ -897,7 +1182,7 @@ td pre {
     display: none;
     position: absolute;
     z-index: 5;
-    padding: 10px 14px;
+    padding: 11.5px 16px;
     background-color: var(--bg-deep);
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
@@ -914,7 +1199,7 @@ td pre {
     letter-spacing: 0.14em;
     text-transform: lowercase;
     color: var(--teal);
-    margin: 0 0 0.35rem 2px;
+    margin: 0 0 0.35rem 2.3px;
 }
 
 #content .llr-history-widget {
@@ -933,9 +1218,9 @@ td pre {
     flex-direction: column;
     justify-content: space-between;
     padding: 0.1rem 0 0.9rem;
-    width: 38px;
+    width: 43.7px;
     color: var(--fg-3);
-    font-size: 12px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
@@ -953,8 +1238,8 @@ td pre {
 
 #content .llr-history-graph {
     display: block;
-    width: 336px;
-    height: 115px;
+    width: 386.4px;
+    height: 132.2px;
     max-width: 100%;
 }
 
@@ -963,7 +1248,7 @@ td pre {
     justify-content: space-between;
     padding: 0 0.15rem;
     color: var(--fg-3);
-    font-size: 12px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -987,7 +1272,7 @@ td pre {
 #content .llr-history-graph .llr-bound-label {
     fill: rgba(134, 194, 213, 0.7);
     font-family: inherit;
-    font-size: 8px;
+    font-size: 9px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -1004,13 +1289,16 @@ td pre {
     vector-effect: non-scaling-stroke;
 }
 
-#content .llr-history-graph .llr-path-pos    { stroke: var(--stat-green);  }
-#content .llr-history-graph .llr-path-yellow { stroke: var(--stat-yellow); }
-#content .llr-history-graph .llr-path-neg    { stroke: var(--stat-red);    }
+/* Each stop's real colour is an inline color-mix against the neutral; these
+   are the flat fallbacks a parser without color-mix drops back to. */
 
-#content .llr-history-graph .llr-fill-pos    { color: var(--stat-green);  }
-#content .llr-history-graph .llr-fill-yellow { color: var(--stat-yellow); }
-#content .llr-history-graph .llr-fill-neg    { color: var(--stat-red);    }
+#content .llr-history-graph .llr-stop-pos    { stop-color: var(--llr-pos);    }
+#content .llr-history-graph .llr-stop-yellow { stop-color: var(--llr-yellow); }
+#content .llr-history-graph .llr-stop-neg    { stop-color: var(--llr-neg);    }
+
+#content .llr-history-graph .llr-fill-pos    { color: var(--llr-pos);    }
+#content .llr-history-graph .llr-fill-yellow { color: var(--llr-yellow); }
+#content .llr-history-graph .llr-fill-neg    { color: var(--llr-neg);    }
 
 #content .llr-history-graph .llr-endpoint {
     fill: currentColor;
@@ -1058,9 +1346,9 @@ td pre {
     opacity: 0.9;
 }
 
-#content .llr-history-graph .llr-hover-point.pos    { stroke: var(--stat-green);  }
-#content .llr-history-graph .llr-hover-point.yellow { stroke: var(--stat-yellow); }
-#content .llr-history-graph .llr-hover-point.neg    { stroke: var(--stat-red);    }
+#content .llr-history-graph .llr-hover-point.pos    { stroke: var(--llr-pos);    }
+#content .llr-history-graph .llr-hover-point.yellow { stroke: var(--llr-yellow); }
+#content .llr-history-graph .llr-hover-point.neg    { stroke: var(--llr-neg);    }
 
 #content .llr-history-graph .llr-hitbox {
     fill: transparent;
@@ -1071,13 +1359,13 @@ td pre {
     position: absolute;
     top: 0;
     left: 0;
-    padding: 5px 10px 4px;
+    padding: 5.8px 11.5px 4.6px;
     background-color: var(--bg-deep);
     border: 1px solid var(--teal-deep);
     border-radius: var(--radius-sm);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
     color: var(--fg-1);
-    font-size: 13px;
+    font-size: 15px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     pointer-events: none;
@@ -1130,17 +1418,23 @@ td pre {
 
 @media (max-width: 767px) {
 
+    /* Under the header, not over it: the drawer covers the page, and the only
+       control that closes it is the toggle up in that bar. Sliding out over
+       the header hides the way back, so the drawer stops below it and starts
+       its own content clear of it. */
     #sidebar {
         flex-basis: 100%;
         position: fixed;
         top: 0;
         bottom: 0;
         width: 100%;
+        box-sizing: border-box;
+        padding-top: 76px;
         background-color: var(--bg-panel);
         overflow-y: auto;
         transition: transform cubic-bezier(0.82, 0.08, 0.1, 0.93) 0.3s;
         transform: translateX(-100%);
-        z-index: 20;
+        z-index: 5;
     }
 
     body.sidebar-open #sidebar {
@@ -1149,7 +1443,7 @@ td pre {
 
     #sidebar-toggle {
         display: flex;
-        padding: 10px;
+        padding: 11.5px;
         color: var(--fg-1);
         background-color: transparent;
         border: none;
@@ -1163,12 +1457,11 @@ td pre {
         height: auto;
         flex-grow: 0;
         flex-basis: 100%;
-        padding: 0 8px;
+        padding: 76px 9px 0;
     }
 
     #content {
         overflow-x: hidden;
-        margin-top: 66px;
     }
 
     #content-header {
@@ -1180,14 +1473,14 @@ td pre {
         top: 0;
         left: 0;
         right: 0;
-        padding: 0 6px;
+        padding: 0 7px;
         z-index: 10;
     }
 
     #content-header h2 {
         display: block;
         font-size: clamp(1.0rem, 4.8vw, 1.4rem);
-        margin: 8px 0;
+        margin: 9px 0;
     }
 
     #content-header .site-title {
@@ -1203,7 +1496,11 @@ td pre {
         overflow-y: hidden;
     }
 
-    table {
+    /* The test list is left out: it already scrolls inside .table-scroll, and
+       as its own scroller the stripes painted on it stay pinned to the
+       viewport while the rows slide over them, and spill past the rows into
+       the overscroll at either end. */
+    table:not(.test-list) {
         display: block;
         overflow-x: auto;
     }
@@ -1238,7 +1535,7 @@ td pre {
         width: 100%;
     }
 
-    #content .test-list tr td.test-info {
+    #content .test-list .test-info {
         display: none;
     }
 }

@@ -14,7 +14,8 @@
 
     "home_engines": [
         "Integral", "PlentyChess", "Obsidian", "Caissa", "Quanticade",
-        "Serendipity", "Spaghet", "Schoenemann", "Clarity", "Illumina"
+        "Serendipity", "Spaghet", "Schoenemann", "Clarity", "Illumina",
+        "Pawnocchio", "Vine", "Anura"
     ],
 
     "books" : [

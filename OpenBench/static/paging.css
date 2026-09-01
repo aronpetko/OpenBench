@@ -22,7 +22,7 @@
     display: inline-block;
     font-family: var(--font-ui);
     font-size: 0.78rem;
-    padding: 5px 0.8rem;
+    padding: 5.8px 0.8rem;
     margin: 0;
     border-right: 1px solid var(--line-soft);
     background-color: transparent;
@@ -30,8 +30,8 @@
     text-decoration: none;
     cursor: pointer;
     transition: background-color 0.15s ease, color 0.15s ease;
-    height: 26px;
-    line-height: 26px;
+    height: 30px;
+    line-height: 30px;
     min-width: 1.6rem;
     text-align: center;
     vertical-align: middle;

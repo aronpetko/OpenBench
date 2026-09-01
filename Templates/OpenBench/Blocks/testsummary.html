@@ -1,16 +1,24 @@
 {% load mytags %}
-<td><a href="/user/{{test.author}}">{{test.author|capfirst|slice:":6"}}</a></td>
-<td>{{test.dev_engine}}</td>
-<td>
-    <a href="{{test|workload_url}}">{{test|prettyDevName}}</a>
-    {% if test.error %} <span style="color: #ff6f6f; cursor: pointer" title="Crash or illegal move">*</span> {% endif %}
-    {% if test|test_is_fischer %} <span style="color: green; cursor: pointer" title="Fischer random chess">*</span> {% endif %}
+<td class="test-owner">
+    <span class="owner-engine">{{test.dev_engine}}</span>
+    <a class="owner-author" href="/user/{{test.author}}">{{test.author|capfirst}}</a>
 </td>
-<td class="textcenter"><a href="{{test|gitDiffLink}}">diff</a></td>
-<td>
-    {{test.dev_time_control}}
-    {% if test|test_is_time_odds %} <span style="color: yellow; cursor: pointer" title="Time odds">*</span> {% endif %}
-    {% if test|test_is_smp_odds %} <span style="color: orange; cursor: pointer" title="Thread odds">*</span> {% endif %}
+<td class="test-branch">
+    <div class="branch-line"><a class="branch-name" href="{{test|workload_url}}">{{test|prettyDevName}}</a></div>
+    {% if test.info %}<div class="test-info">{{test.info}}</div>{% endif %}
 </td>
+
+<!-- Anything unusual about the test, named rather than starred, sharing the
+     diff link's cell. Cells align on their centres, not their baselines, so a
+     tag in a column of its own never sits level with the smaller word beside
+     it; in one line box they cannot drift apart. -->
+<td class="test-flags">
+    {% if test.error %}<span class="test-flag flag-crash" title="Crash or illegal move">crash</span>{% endif %}
+    {% if test|test_is_time_odds %}<span class="test-flag flag-odds" title="Dev and base run different time controls">time odds</span>{% endif %}
+    {% if test|test_is_smp %}<span class="test-flag flag-smp" title="Both sides run multiple threads">smp</span>{% endif %}
+    {% if test|test_is_smp_odds %}<span class="test-flag flag-odds" title="Dev and base run different thread counts">smp odds</span>{% endif %}
+    {% if test|test_is_fischer %}<span class="test-flag flag-frc" title="Fischer random chess">frc</span>{% endif %}
+    <a class="test-diff" href="{{test|gitDiffLink}}">diff</a>
+</td>
+<td>{{test.dev_time_control}}</td>
 <td class='statblock statblock-{{test|testResultColour}}'><pre>{{test|shortStatBlockHTML}}</pre></td>
-<td class="test-info"><div>{{test.info}}</div></td>

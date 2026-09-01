@@ -175,28 +175,28 @@
             </div>
 
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true, true)">Copy Stat Block (Code Blocked)</a>
+                <a class="anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true, true)">Copy Stat Block (Code Blocked)</a>
             </div>
         {% endif %}
 
         <!-- PGN Download Button -->
         {% if workload.upload_pgns != "FALSE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" href="/api/pgns/{{workload.id}}/">Download PGN Archive</a>
+                <a class="anchorbutton btn-blue" href="/api/pgns/{{workload.id}}/">Download PGN Archive</a>
             </div>
         {% endif %}
 
         <!-- Copies Raw SPSA Input from /api/spsa/{{workload.id}}/inputs/ -->
         {% if type == "TUNE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_spsa_inputs({{workload.id}})">Copy SPSA Inputs</a>
+                <a class="anchorbutton btn-blue" onclick="copy_spsa_inputs({{workload.id}})">Copy SPSA Inputs</a>
             </div>
         {% endif %}
 
         <!-- Copies Optimal Values from /api/spsa/{{workload.id}}/outputs/ -->
         {% if type == "TUNE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_spsa_outputs({{workload.id}})">Copy SPSA Outputs</a>
+                <a class="anchorbutton btn-blue" onclick="copy_spsa_outputs({{workload.id}})">Copy SPSA Outputs</a>
             </div>
         {% endif %}
 

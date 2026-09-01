@@ -27,14 +27,11 @@ function init_llr_history_widgets() {
 
         function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-        function band(point) {
-            if (point.l >= 0) return 'pos';
-            return point.v ? 'yellow' : 'neg';
-        }
-
         function show(point) {
 
-            var name = band(point);
+            // Rendered server-side, off the same smoothed LLR the line's
+            // gradient is coloured from
+            var name = point.b;
 
             line.setAttribute('x1', point.x);
             line.setAttribute('x2', point.x);

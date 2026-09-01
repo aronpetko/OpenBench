@@ -112,6 +112,75 @@
                     if (best) best.classList.add('active');
                 }
 
+                {
+                    // Turn the engine line into a marquee: the whole bulleted
+                    // list slides rightwards through the width of the column,
+                    // looping seamlessly against a second copy of itself.
+                    // Without this script the line stays as it is authored,
+                    // every engine on one static row.
+
+                    const line = document.querySelector('.engine-line');
+                    const slot = line && line.querySelector('.engine-carousel');
+
+                    if (slot) {
+
+                        // The authored items become the first copy; the track
+                        // holds that copy and, once we know it overflows, an
+                        // identical clone right behind it
+                        const track = document.createElement('span');
+                        const copy  = document.createElement('span');
+
+                        track.className = 'engine-track';
+                        copy.className  = 'engine-track-copy';
+
+                        while (slot.firstChild)
+                            copy.appendChild(slot.firstChild);
+
+                        track.appendChild(copy);
+                        slot.appendChild(track);
+                        line.classList.add('is-carousel');
+
+                        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+                        const layout = () => {
+
+                            const clone = track.querySelector('.engine-track-clone');
+                            if (clone) clone.remove();
+
+                            const width = copy.getBoundingClientRect().width;
+
+                            // Everything fits, or motion is unwelcome: leave
+                            // the list sitting centred and still
+                            if (still.matches || width <= slot.getBoundingClientRect().width + 1) {
+                                line.classList.remove('is-scrolling');
+                                return;
+                            }
+
+                            const behind = copy.cloneNode(true);
+                            behind.classList.add('engine-track-clone');
+                            behind.setAttribute('aria-hidden', 'true');
+                            track.appendChild(behind);
+
+                            // One full loop a minute, whatever the list holds
+                            track.style.animationDuration = '60s';
+                            line.classList.add('is-scrolling');
+                        };
+
+                        layout();
+
+                        // The mono face may still be loading, in which case the
+                        // measurement above was taken against the fallback
+                        if (document.fonts && document.fonts.ready)
+                            document.fonts.ready.then(layout);
+
+                        let resizing = null;
+                        window.addEventListener('resize', () => {
+                            clearTimeout(resizing);
+                            resizing = setTimeout(layout, 150);
+                        });
+                    }
+                }
+
             }, false);
 
             document.addEventListener('submit', event => {
@@ -220,26 +289,34 @@
         </div>
 
         <div id="content-parent">
-            <div id="content" class="pb-5">
-                <div id="content-header">
-                    <button id="sidebar-toggle" onclick="toggle_sidebar()" aria-label="Toggle navigation">
-                        <i class="fa-solid fa-bars fa-fw"></i>
-                    </button>
-                    <h2>
-                        <a class="site-title" href="/">FuryBench&nbsp;Testing&nbsp;Framework</a>
-                    </h2>
-                </div>
 
-                <!-- The engines developed here. Deliberately not
-                     config.engines: that list also carries engines we only
-                     ever test against. -->
-                {% if config.home_engines %}
-                <div class="engine-line">
-                    <span class="engine-line-label">home to</span>
-                    {% for engine in config.home_engines %}<span class="engine-line-item">{{engine}}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
+            <!-- The header and the engine line sit outside #content, which is
+                 capped to a reading width on most pages but runs the full
+                 window on the index and search. Out here they get the same
+                 width on every page, and the engine line has the whole column
+                 to fit on one row. -->
+
+            <div id="content-header">
+                <button id="sidebar-toggle" onclick="toggle_sidebar()" aria-label="Toggle navigation">
+                    <i class="fa-solid fa-bars fa-fw"></i>
+                </button>
+                <h2>
+                    <a class="site-title" href="/">FuryBench&nbsp;Testing&nbsp;Framework</a>
+                </h2>
+            </div>
+
+            <!-- The engines developed here. Deliberately not config.engines:
+                 that list also carries engines we only ever test against.
+                 Written as the full bulleted line, which is what shows
+                 without JavaScript; the script slides it as a marquee. -->
+            {% if config.home_engines %}
+            <!-- No whitespace between the spans: the separators are drawn by
+                 CSS, and a newline here would collapse into a stray space that
+                 lands on one side of every bullet only. -->
+            <div class="engine-line"><span class="engine-line-label">home to</span><span class="engine-carousel">{% for engine in config.home_engines %}<span class="engine-line-item">{{engine}}</span>{% endfor %}</span></div>
+            {% endif %}
+
+            <div id="content" class="pb-5">
 
                 {% if request.session.error_message %}
                     <div class="error-message">

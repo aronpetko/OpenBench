@@ -269,7 +269,9 @@ def index(request, page=1):
     active    = OpenBench.utils.get_active_tests()
     completed = OpenBench.utils.get_completed_tests()
 
-    start, end, paging = OpenBench.utils.getPaging(completed, int(page), 'index')
+    # The front page already carries every pending and active test above the
+    # completed list, so it takes a shorter page of them than /user or /greens
+    start, end, paging = OpenBench.utils.getPaging(completed, int(page), 'index', pagelen=15)
 
     data = {
         'pending'   : pending,

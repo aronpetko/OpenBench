@@ -54,10 +54,6 @@
     </script>
 
     <style>
-        #content {
-            max-width: 100%;
-        }
-
         /* Trim the wide right-aligned label gutter on the left */
         #content .form .row label {
             width: 112px;
@@ -212,9 +208,9 @@
     {% if tests %}<div class="search-results-spacer"></div>{% endif %}
 
     <div class="table-scroll">
-    <table class="test-list stripes hoverable">
+    <table class="test-list hoverable">
         {% for test in tests %}
-            <tr>
+            <tr class="{% cycle 'row-a' 'row-b' %}">
                 <td class="datestamp">{{test.creation|date:"U"}}</td>
                 {% include "OpenBench/Blocks/testsummary.html" %}
             </tr>

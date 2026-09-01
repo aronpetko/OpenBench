@@ -155,11 +155,20 @@ def read_git_credentials(engine):
 
 ## LLR History
 ##
-## Every result submission appends a (games, llr, verdict) sample to a small
-## JSON file, which the workload page renders as an inline SVG sparkline. The
-## series is append-only, and downsampled once it grows past twice the cap.
+## Result submissions feed a (games, llr, verdict) series in a small JSON file,
+## which the workload page renders as an inline SVG sparkline. The series is
+## append-only, and downsampled once it grows past twice the cap.
+##
+## Submissions arrive far faster than the curve says anything new, so a sample
+## is only taken once LLR_HISTORY_INTERVAL games have been played since the
+## last one, and its LLR is an EMA over the previous sample rather than the
+## raw value. The raw LLR still drives pass/fail; only the drawn curve is
+## smoothed, and the final sample of a finished test is recorded unsmoothed so
+## the graph ends where the test actually stopped.
 
-LLR_HISTORY_SIZE = 120
+LLR_HISTORY_SIZE     = 120
+LLR_HISTORY_INTERVAL = 50
+LLR_HISTORY_ALPHA    = 0.30
 
 _logger = logging.getLogger(__name__)
 
@@ -276,10 +285,21 @@ def record_llr_history(test):
             history = None
 
         history = history or [[0, 0.0]]
-        point   = [test.games, round(test.currentllr, 4), int(test.wins >= test.losses)]
 
-        if point[0] < history[-1][0]:
+        if test.games < history[-1][0]:
             return
+
+        # Hold off until enough games have accumulated to be worth a sample.
+        # A finished test always records, so the curve reaches its endpoint.
+        played = test.games - history[-1][0]
+        if played < LLR_HISTORY_INTERVAL and not test.finished:
+            return
+
+        llr = test.currentllr
+        if not test.finished:
+            llr = LLR_HISTORY_ALPHA * llr + (1 - LLR_HISTORY_ALPHA) * history[-1][1]
+
+        point = [test.games, round(llr, 4), int(test.wins >= test.losses)]
 
         if history[-1][0] == point[0]:
             history[-1] = point
