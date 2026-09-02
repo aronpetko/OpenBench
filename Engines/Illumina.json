@@ -1,6 +1,6 @@
 {
   "private": false,
-  "nps": 1500000,
+  "nps": 2000000,
   "source": "https://github.com/mergener/illumina",
 
   "build": {
