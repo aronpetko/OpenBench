@@ -96,13 +96,16 @@ function format_cpu_name(name) {
     if (/Intel/.test(name) && /Xeon/.test(name))
         name = name.replace(/Intel/g, '');
 
-    // Likewise, "AMD EPYC" is redundant — EPYC already implies AMD.
-    if (/AMD/.test(name) && /EPYC/.test(name))
+    // Likewise, "AMD EPYC" and "AMD Ryzen" are redundant — both imply AMD.
+    if (/AMD/.test(name) && /EPYC|Ryzen/.test(name))
         name = name.replace(/AMD/g, '');
 
     // "Processor" and "CPU" add nothing in this context.
     name = name.replace(/Processor/g, '');
     name = name.replace(/CPU/g, '');
+
+    // Core counts, ie "16-Core", are reported separately in the table.
+    name = name.replace(/\d+-Core/gi, '');
 
     // The removals above can leave stray spacing; collapse runs of whitespace
     // to a single space and trim the ends.
@@ -112,6 +115,9 @@ function format_cpu_name(name) {
 }
 
 function append_summary_section(table, label, rows, key_formatter) {
+
+    // Older workloads don't have NPS tracking stats.
+    const is_nps_available =  rows.some(row => row.dev_nps > 0);
 
     // A header row naming the grouping, then one tbody of data rows. All three
     // sections share the one table, so their columns line up automatically.
@@ -124,6 +130,11 @@ function append_summary_section(table, label, rows, key_formatter) {
     ['Elo', 'Pairs', '%'].forEach(name => {
         header.appendChild(summary_cell('th', name, 'numeric'));
     });
+
+    if (is_nps_available) {
+        header.appendChild(summary_cell('th', 'KNPS'));
+        header.appendChild(summary_cell('th', 'Scaled KNPS'));
+    }
 
     table.appendChild(header);
 
@@ -140,6 +151,13 @@ function append_summary_section(table, label, rows, key_formatter) {
         tr.appendChild(summary_cell('td', row.pairs, 'numeric'));
         tr.appendChild(summary_cell('td', row.percent, 'numeric'));
 
+        if (is_nps_available) {
+            const format_nps = (nps) => (nps / 1000.0).toFixed(1);
+
+            tr.appendChild(summary_cell('td', `${format_nps(row.dev_nps)} / ${format_nps(row.base_nps)}`));
+            tr.appendChild(summary_cell('td', `${format_nps(row.dev_nps_scaled)} / ${format_nps(row.base_nps_scaled)}`));
+        }
+
         tbody.appendChild(tr);
     });
 
@@ -154,7 +172,7 @@ async function fetch_summary(workload_id) {
             container.innerHTML = ''; // Rebuild the whole table each fetch
 
             const table = document.createElement('table');
-            table.className = 'stripes wrappable';
+            table.className = 'stripes wrappable summary-table';
 
             append_summary_section(table, 'User', data.summary.user);
             append_summary_section(table, 'CPU',  data.summary.cpu_name, format_cpu_name);

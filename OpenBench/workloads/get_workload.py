@@ -45,10 +45,11 @@ def get_workload(request, machine):
     # Avoid creating duplicate Result objects
     result, created = Result.objects.get_or_create(test=test, machine=machine)
 
-    # Update the Machine's status and save everything
+    # Update the Machine's status. Only the touched columns are written back,
+    # to avoid re-serializing the (large) info blob on every workload request
     machine.workload = test.id;
     machine.mnps = machine.dev_mnps = machine.base_mnps = 0.00
-    machine.save(); result.save()
+    machine.save(update_fields=['workload', 'mnps', 'dev_mnps', 'base_mnps', 'updated'])
 
     return { 'workload' : workload_to_dictionary(test, result, machine) }
 
@@ -77,35 +78,39 @@ def select_workload(request, machine):
     throughput_sum = sum(x['throughput'] for x in worker_dist.values())
     fair_ratio     = thread_sum / throughput_sum
 
+    # The candidates are already in memory, so the winner never needs a re-fetch
+    by_id = { workload.id : workload for workload in candidates }
+
     # Step 6: Repeat the same machine, if we are still within +- 25% fairness
     if machine.workload in worker_dist.keys():
         this_ratio = worker_dist[machine.workload]['ratio']
         if min_ratio / fair_ratio > 0.75 and this_ratio / fair_ratio < 1.25:
-            return Test.objects.get(id=machine.workload)
+            return by_id[machine.workload]
 
     # Step 7: Pick a random test, amongst those who share the min_ratio, weighted by throughput
     choices = [id for id, data in worker_dist.items() if data['ratio'] == min_ratio]
     weights = [data['throughput'] for id, data in worker_dist.items() if data['ratio'] == min_ratio]
-    return Test.objects.get(id=random.choices(choices, weights=weights)[0])
+    return by_id[random.choices(choices, weights=weights)[0]]
 
 def filter_valid_workloads(request, machine):
 
-    workloads = OpenBench.utils.get_active_tests()
+    # The ordering of get_active_tests() is for the GUI. It costs a sort that we
+    # do not need, since the priority refinement below is done in Python anyway
+    workloads = OpenBench.utils.get_active_tests().order_by()
 
-    # Skip engines that the Machine cannot handle
-    for engine in OPENBENCH_CONFIG['engines'].keys():
-        if engine not in machine.info['supported']:
-            workloads = workloads.exclude(dev_engine=engine)
-            workloads = workloads.exclude(base_engine=engine)
+    # Skip engines that the Machine cannot handle. Expressed as a whitelist, so
+    # the query carries two IN() clauses instead of one NOT for every engine
+    supported = machine.info['supported']
+    workloads = workloads.filter(dev_engine__in=supported, base_engine__in=supported)
 
     # Skip workloads that are blacklisted on the machine
     if blacklisted := request.POST.getlist('blacklist'):
         workloads = workloads.exclude(id__in=blacklisted)
 
     # Skip workloads with unmet Syzygy requirements
-    for K in range(machine.info['syzygy_max'] + 1, 10):
-        workloads = workloads.exclude(syzygy_adj='%d-MAN' % (K))
-        workloads = workloads.exclude(syzygy_wdl='%d-MAN' % (K))
+    if unmet := ['%d-MAN' % (K) for K in range(machine.info['syzygy_max'] + 1, 10)]:
+        workloads = workloads.exclude(syzygy_adj__in=unmet)
+        workloads = workloads.exclude(syzygy_wdl__in=unmet)
 
     # Skip any workload using, or measuring, Time, for --noisy workers
     if machine.info.get('noisy'):
@@ -169,10 +174,15 @@ def compute_resource_distribution(workloads, machine, has_focus):
     # Ignore machines working on non-candidates;
     # Ignore focus-assigned machines when has_focus is false
 
-    for x in OpenBench.utils.getRecentMachines():
-        if x != machine and x.workload in worker_dist:
-            if has_focus or worker_dist[x.workload]['engine'] not in x.info.get('focus', []):
-                worker_dist[x.workload]['threads'] += x.info['concurrency']
+    # The first two are done in the database, so that we never pay to deserialize
+    # the info blob of a machine that cannot contribute to any of the candidates
+
+    others = OpenBench.utils.getRecentMachines() \
+        .filter(workload__in=list(worker_dist.keys())).exclude(id=machine.id)
+
+    for x in others:
+        if has_focus or worker_dist[x.workload]['engine'] not in x.info.get('focus', []):
+            worker_dist[x.workload]['threads'] += x.info['concurrency']
 
     # Count of tests that exist for a particular dev_engine
 
@@ -261,7 +271,8 @@ def workload_to_dictionary(test, result, machine):
             workload['test']['genfens_seeds'] = [
                 random.randint(0, 2**31 - 1) for x in range(machine.info['concurrency'])]
 
-        test.save()
+        # Only book_index changed. Avoid holding the lock for longer than needed
+        test.save(update_fields=['book_index', 'updated'])
 
     return workload
 

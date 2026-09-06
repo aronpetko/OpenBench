@@ -44,13 +44,11 @@ from OpenSite.settings import MEDIA_ROOT
 
 from django.db import transaction
 from django.db.models import F, Q
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
 from django.core.files.base import ContentFile
 from django.utils import timezone
-
-from wsgiref.util import FileWrapper
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                              GENERAL UTILITIES                              #
@@ -618,12 +616,6 @@ def verify_worker(function):
 
 @csrf_exempt
 def client_version_ref(request):
-
-    # Verify the User's credentials
-    try: user = authenticate(request, True)
-    except UnableToAuthenticate:
-        return JsonResponse({ 'error' : 'Bad Credentials' })
-
     # Enough information to download the right Client
     return JsonResponse({
         'client_version'  : OPENBENCH_CONFIG['client_version' ],
@@ -633,11 +625,6 @@ def client_version_ref(request):
 
 @csrf_exempt
 def client_match_runner_version_ref(request):
-
-    # Verify the User's credentials
-    try: user = authenticate(request, True)
-    except UnableToAuthenticate:
-        return JsonResponse({ 'error' : 'Bad Credentials' })
 
     # Enough information to build the right Fastchess version
     return JsonResponse({
@@ -753,7 +740,7 @@ def client_submit_nps(request, machine):
     machine.mnps      = float(request.POST['nps'     ]) / 1e6;
     machine.dev_mnps  = float(request.POST['dev_nps' ]) / 1e6;
     machine.base_mnps = float(request.POST['base_nps']) / 1e6;
-    machine.save()
+    machine.save(update_fields=['mnps', 'dev_mnps', 'base_mnps', 'updated'])
 
     # Pass back an empty JSON response
     return JsonResponse({})
@@ -793,11 +780,31 @@ def client_submit_results(request, machine):
 def client_heartbeat(request, machine):
 
     # Force a refresh of the updated timestamp
-    machine.save()
+    machine.save(update_fields=['updated'])
 
     # Include a 'stop' header iff the test was finished
-    test = Test.objects.get(id=int(request.POST['test_id']))
-    return JsonResponse([{}, { 'stop' : True }][test.finished])
+    finished = Test.objects.filter(id=int(request.POST['test_id'])).values_list('finished', flat=True).first()
+
+    return JsonResponse([{}, { 'stop' : True }][bool(finished)])
+
+@csrf_exempt
+@verify_worker
+def client_submit_nps_stats(request, _):
+
+    result_id = int(request.POST['result_id'])
+
+    # No risk from concurrent access
+    Result.objects.filter(id=result_id).update(
+        dev_nodes        = F('dev_nodes'       ) + int(request.POST['dev_nodes'       ]),
+        dev_time         = F('dev_time'        ) + int(request.POST['dev_time'        ]),
+        dev_time_scaled  = F('dev_time_scaled' ) + int(request.POST['dev_time_scaled' ]),
+        base_nodes       = F('base_nodes'      ) + int(request.POST['base_nodes'      ]),
+        base_time        = F('base_time'       ) + int(request.POST['base_time'       ]),
+        base_time_scaled = F('base_time_scaled') + int(request.POST['base_time_scaled']),
+        updated          = timezone.now(),
+    )
+
+    return JsonResponse({})
 
 @csrf_exempt
 @verify_worker
@@ -973,14 +980,7 @@ def api_pgns(request, pgn_id):
         return api_response({ 'error' : 'Still processing individual PGNs into the archive. Try again shortly' })
 
     # Craft the download HTML response
-    fwrapper = FileWrapper(open(pgn_path, 'rb'), 8192)
-    response = FileResponse(fwrapper, content_type='application/octet-stream')
-
-    # Set all headers and return response
-    response['Expires'] = -1
-    response['Content-Length'] = os.path.getsize(pgn_path)
-    response['Content-Disposition'] = 'attachment; filename=%d.pgn.tar' % (pgn_id)
-    return response
+    return OpenBench.utils.media_download_response(pgn_path, '%d.pgn.tar' % (pgn_id), -1)
 
 @csrf_exempt
 def api_spsa(request, workload_id, query):

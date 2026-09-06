@@ -29,6 +29,7 @@ import random
 import re
 import requests
 import tempfile
+import urllib.parse
 
 from contextlib import ExitStack
 from django.contrib.auth import authenticate
@@ -36,7 +37,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
 from django.db.models import F
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from wsgiref.util import FileWrapper
 
@@ -45,7 +46,6 @@ from OpenSite.settings import MEDIA_ROOT, PROJECT_PATH
 from OpenBench.config import OPENBENCH_CONFIG
 from OpenBench.models import *
 from OpenBench.stats import TrinomialSPRT, PentanomialSPRT
-
 
 import OpenBench.views
 import OpenBench.model_utils
@@ -127,8 +127,6 @@ class TimeControl(object):
         # Fischer or Sudden Death otherwise
         return float(time_str.split('+')[0])
 
-
-
 def workload_uses_time_based_tc(workload):
 
     dev_type  = TimeControl.control_type(workload.dev_time_control)
@@ -138,11 +136,31 @@ def workload_uses_time_based_tc(workload):
        or (dev_type  != TimeControl.FIXED_NODES and dev_type  != TimeControl.FIXED_DEPTH) \
        or (base_type != TimeControl.FIXED_NODES and base_type != TimeControl.FIXED_DEPTH)
 
-
-
 def path_join(*args):
     return "/".join([f.lstrip("/").rstrip("/") for f in args]).rstrip('/')
 
+def media_download_response(fpath, filename, expires):
+
+    # Craft a download response for a file inside of MEDIA_ROOT. Django will
+    # stream the file itself, unless configured to hand the file off to an
+    # nginx reverse proxy, which serves it far more efficiently. Django still
+    # performs all of the permission checks in either case.
+
+    if not OPENBENCH_CONFIG['use_x_accel_redirect']:
+        fwrapper = FileWrapper(open(fpath, 'rb'), 8192)
+        response = FileResponse(fwrapper, content_type='application/octet-stream')
+        response['Content-Length'] = os.path.getsize(fpath)
+
+    else:
+        # nginx serves the body, and sets the Content-Length for us
+        root     = OPENBENCH_CONFIG['x_accel_redirect_root'].rstrip('/')
+        relative = os.path.relpath(fpath, MEDIA_ROOT).replace(os.sep, '/')
+        response = HttpResponse(content_type='application/octet-stream')
+        response['X-Accel-Redirect'] = urllib.parse.quote('%s/%s' % (root, relative))
+
+    response['Expires'] = expires
+    response['Content-Disposition'] = 'attachment; filename=%s' % (filename)
+    return response
 
 def read_git_credentials(engine):
     fname = 'credentials.%s' % (engine.replace(' ', '').lower())
@@ -326,19 +344,22 @@ def extract_option(options, option):
     if match: return match.group()
 
 
-
-
 def get_pending_tests():
-    t = Test.objects.filter(approved=False)
+    t = Test.objects.select_related('dev', 'base').filter(approved=False)
     t = t.exclude(finished=True)
     t = t.exclude(deleted=True)
     return t.order_by('-creation')
 
 def get_active_tests():
-    t = Test.objects.filter(approved=True)
+    t = Test.objects.select_related('dev', 'base').filter(approved=True)
     t = t.exclude(finished=True)
     t = t.exclude(deleted=True)
     return t.order_by('-priority', '-currentllr')
+
+def get_completed_tests():
+    t = Test.objects.select_related('dev', 'base').filter(finished=True)
+    t = t.exclude(deleted=True)
+    return t.order_by('-updated')
 
 def group_active_tests_by_priority(active):
     grouped = []
@@ -347,11 +368,6 @@ def group_active_tests_by_priority(active):
             grouped.append({ 'priority' : test.priority, 'tests' : [] })
         grouped[-1]['tests'].append(test)
     return grouped
-
-def get_completed_tests():
-    t = Test.objects.filter(finished=True)
-    t = t.exclude(deleted=True)
-    return t.order_by('-updated')
 
 
 def getRecentMachines(minutes=2):
@@ -474,15 +490,9 @@ def network_delete(request, engine, network):
 def network_download(request, engine, network):
 
     # Craft the download HTML response
-    netfile  = os.path.join(MEDIA_ROOT, network.sha256)
-    fwrapper = FileWrapper(open(netfile, 'rb'), 8192)
-    response = FileResponse(fwrapper, content_type='application/octet-stream')
-
-    # Set all headers and return response
-    response['Expires'] = (datetime.datetime.utcnow() + datetime.timedelta(days=7)).ctime()
-    response['Content-Length'] = os.path.getsize(netfile)
-    response['Content-Disposition'] = 'attachment; filename=' + network.sha256
-    return response
+    netfile = os.path.join(MEDIA_ROOT, network.sha256)
+    expires = (datetime.datetime.utcnow() + datetime.timedelta(days=7)).ctime()
+    return media_download_response(netfile, network.sha256, expires)
 
 def network_edit(request, engine, network):
 

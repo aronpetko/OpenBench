@@ -1,5 +1,5 @@
 {
-    "client_version"     : 49,
+    "client_version"     : 50,
     "client_repo_url"    : "https://github.com/aronpetko/OpenBench",
     "client_repo_ref"    : "master",
 
@@ -18,12 +18,16 @@
         "Pawnocchio", "Vine", "Anura"
     ],
 
+    "use_x_accel_redirect"  : false,
+    "x_accel_redirect_root" : "/x-accel-media/",
+
     "books" : [
         "2moves_v1.epd",
         "3moves_FRC.epd",
         "4moves_noob.epd",
         "8moves_v3.epd",
         "DFRC.epd",
+        "DFRC_4852_v1.epd",
         "Endgames.epd",
         "Pohl.epd",
         "Pohl.pgn",
@@ -33,8 +37,11 @@
         "UHO_Lichess_4852_v1.epd",
         "DFRC_4852_v1.epd",
         "Vondele.epd",
+        "dfrc_pawnocchio.epd",
+        "dfrc_vine_datagen.epd",
         "endgames_cdb95105.epd",
-        "fortresses_150_250.epd"
+        "fortresses_150_250.epd",
+        "fortresses_torch.epd"
     ],
 
     "engines" : [

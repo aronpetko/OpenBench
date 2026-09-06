@@ -53,7 +53,7 @@ class Machine(Model):
     mnps      = FloatField(default=0.00)
     dev_mnps  = FloatField(default=0.00)
     base_mnps = FloatField(default=0.00)
-    updated   = DateTimeField(auto_now=True)
+    updated   = DateTimeField(auto_now=True, db_index=True)
     secret    = CharField(max_length=64, default='None')
     info      = JSONField()
     workload  = IntegerField(default=0)
@@ -83,6 +83,14 @@ class Result(Model):
     games    = IntegerField(default=0)
     crashes  = IntegerField(default=0)
     timeloss = IntegerField(default=0)
+
+    # Total counters for nodes and ms for NPS tracking
+    dev_nodes         = BigIntegerField(default=0)
+    dev_time          = BigIntegerField(default=0)
+    dev_time_scaled   = BigIntegerField(default=0)
+    base_nodes        = BigIntegerField(default=0)
+    base_time         = BigIntegerField(default=0)
+    base_time_scaled  = BigIntegerField(default=0)
 
     def __str__(self):
         return '{0} {1}'.format(self.test.dev.name, self.machine.__str__())
