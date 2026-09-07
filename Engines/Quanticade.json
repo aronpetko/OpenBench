@@ -1,6 +1,6 @@
 {
     "private" : false,
-    "nps"     : 850000,
+    "nps"     : 1000000,
     "source"  : "https://github.com/Quanticade/Quanticade",
 
     "build" : {
@@ -62,9 +62,15 @@
         },
 
         "SMP LTC" : {
-            "both_options"      : "Threads=8 Hash=256 Minimal=true",
-            "both_time_control" : "16.0+0.16",
+            "both_options"      : "Threads=8 Hash=512 Minimal=true",
+            "both_time_control" : "20.0+0.20",
             "workload_size"     : 16
+        },
+
+        "5k Nodes" : {
+            "both_options"      : "Threads=1 Hash=16 Minimal=true",
+            "both_time_control" : "N=5000",
+            "workload_size"     : 128
         }
     },
 
