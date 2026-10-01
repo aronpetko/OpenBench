@@ -195,6 +195,14 @@
                 form.dataset.submitting = true;
             }, true);
 
+            window.addEventListener('pageshow', event => {
+                if (event.persisted) {
+                    document
+                        .querySelectorAll('form[data-submitting]')
+                        .forEach(form => delete form.dataset.submitting);
+                }
+            });
+
             function toggle_sidebar() {
                 document.body.classList.toggle('sidebar-open')
             }
@@ -234,6 +242,7 @@
                     <li><a title="Login" href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i><span class="nav-label">Login</span></a></li>
                     <li><a title="Register" href="/register"><i class="fa-solid fa-registered fa-fw"></i><span class="nav-label">Register</span></a></li>
                 {% endif %}
+                <li><a title="Manage" href="/manage"><i class="fa-solid fa-sliders fa-fw"></i><span class="nav-label">Manage</span></a></li>
             </ul>
 
             <ul>
@@ -270,18 +279,18 @@
                  test against. home_engines is the same list the ticker uses. -->
             <ul>
                 <li class="header">Our Engines</li>
-                {% for engine, data in config.engines.items %}
-                    {% if engine in config.home_engines %}
-                        <li><a title="{{engine}}" href="{{data.source}}"><i class="fa-solid fa-chess-knight fa-fw"></i><span class="nav-label">{{engine}}</span></a></li>
+                {% for engine in engines %}
+                    {% if engine.name in config.home_engines %}
+                        <li><a title="{{engine.name}}" href="{{engine.source}}"><i class="fa-solid fa-chess-knight fa-fw"></i><span class="nav-label">{{engine.name}}</span></a></li>
                     {% endif %}
                 {% endfor %}
             </ul>
 
             <ul>
                 <li class="header">External Engines</li>
-                {% for engine, data in config.engines.items %}
-                    {% if engine not in config.home_engines %}
-                        <li><a title="{{engine}}" href="{{data.source}}"><i class="fa-solid fa-chess-pawn fa-fw"></i><span class="nav-label">{{engine}}</span></a></li>
+                {% for engine in engines %}
+                    {% if engine.name not in config.home_engines %}
+                        <li><a title="{{engine.name}}" href="{{engine.source}}"><i class="fa-solid fa-chess-pawn fa-fw"></i><span class="nav-label">{{engine.name}}</span></a></li>
                     {% endif %}
                 {% endfor %}
             </ul>

@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand
 import OpenBench.utils
 
 from OpenBench.config import OPENBENCH_CONFIG
-from OpenBench.models import Engine, Machine, Profile, Result, Test
+from OpenBench.models import Engine, EngineConfig, Machine, Profile, Result, Test
 
 
 DEMO_USER = 'demo'
@@ -68,7 +68,7 @@ class Command(BaseCommand):
 
         user    = self.create_user()
         machine = self.create_machine(user)
-        engines = list(OPENBENCH_CONFIG['engines'].keys())
+        engines = list(EngineConfig.objects.values_list('name', flat=True))
 
         for i in range(options['tests']):
             test = self.create_test(user, engines[i % len(engines)], i)
@@ -126,7 +126,7 @@ class Command(BaseCommand):
     def create_test(self, user, engine_name, index):
 
         name, _, llr, drift, finished, passed, failed = self.scenario(index)
-        source = OPENBENCH_CONFIG['engines'][engine_name]['source']
+        source = EngineConfig.objects.get(name=engine_name).source
 
         dev = Engine.objects.create(
             name=name, source=source, sha='%040x' % (random.getrandbits(160)),
