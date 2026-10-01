@@ -18,16 +18,20 @@
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+import contextlib
 import datetime
 import hashlib
 import json
+import logging
 import math
 import os
 import random
 import re
 import requests
+import tempfile
 import urllib.parse
 
+from contextlib import ExitStack
 from django.contrib.auth import authenticate
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
@@ -164,6 +168,169 @@ def read_git_credentials(engine):
     if os.path.exists(fpath):
         with open(fpath) as fin:
             return { 'Authorization' : 'token %s' % fin.readlines()[0].rstrip() }
+
+
+
+## LLR History
+##
+## Result submissions feed a (games, llr, verdict) series in a small JSON file,
+## which the workload page renders as an inline SVG sparkline. The series is
+## append-only, and downsampled once it grows past twice the cap.
+##
+## Submissions arrive far faster than the curve says anything new, so a sample
+## is only taken once LLR_HISTORY_INTERVAL games have been played since the
+## last one, and its LLR is an EMA over the previous sample rather than the
+## raw value. The raw LLR still drives pass/fail; only the drawn curve is
+## smoothed, and the final sample of a finished test is recorded unsmoothed so
+## the graph ends where the test actually stopped.
+
+LLR_HISTORY_SIZE     = 120
+LLR_HISTORY_INTERVAL = 50
+LLR_HISTORY_ALPHA    = 0.30
+
+_logger = logging.getLogger(__name__)
+
+try: import fcntl
+except ImportError: fcntl = None
+
+try: import msvcrt
+except ImportError: msvcrt = None
+
+def llr_history_path(test_id):
+    return os.path.join(MEDIA_ROOT, 'llr_history', '%d.json' % (test_id))
+
+@contextlib.contextmanager
+def _history_lock(path):
+
+    # Serialize the whole read-modify-write. Two concurrent result submissions
+    # would otherwise both load the same file, and the slower writer would
+    # clobber the faster one's appends, leaving gaps in the series.
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    lockfd = os.open(path + '.lock', os.O_CREAT | os.O_RDWR, 0o644)
+
+    try:
+        if fcntl:
+            fcntl.flock(lockfd, fcntl.LOCK_EX)
+        elif msvcrt:
+            msvcrt.locking(lockfd, msvcrt.LK_LOCK, 1)
+        yield
+    finally:
+        try:
+            if not fcntl and msvcrt:
+                os.lseek(lockfd, 0, os.SEEK_SET)
+                msvcrt.locking(lockfd, msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+        os.close(lockfd)
+
+def _read_llr_history(path):
+
+    if not os.path.exists(path):
+        return None
+
+    with open(path) as fin:
+        content = fin.read()
+
+    if not content.strip():
+        return None
+
+    history = json.loads(content)
+
+    if not isinstance(history, list) or not all(
+            isinstance(p, list) and 2 <= len(p) <= 3 for p in history):
+        raise ValueError('Malformed LLR history in %s' % (path))
+
+    return history
+
+def _write_llr_history(path, history):
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd, tmppath = tempfile.mkstemp(dir=os.path.dirname(path), suffix='.tmp')
+
+    try:
+        with os.fdopen(fd, 'w') as fout:
+            json.dump(history, fout)
+        os.replace(tmppath, path)
+
+    except Exception:
+        try: os.unlink(tmppath)
+        except OSError: pass
+        raise
+
+def downsample_history(history, target_size):
+
+    N = len(history)
+    if N <= target_size or target_size < 2:
+        return history
+
+    buckets = target_size - 2
+    step    = (N - 2) / float(buckets)
+    out     = [history[0]]
+
+    for i in range(buckets):
+        lo, hi = int(i * step) + 1, max(int((i + 1) * step) + 1, int(i * step) + 2)
+        bucket = history[lo:hi]
+        if bucket: # Keep the most extreme sample, so peaks survive
+            out.append(max(bucket, key=lambda p: abs(p[1])))
+
+    out.append(history[-1])
+    return out
+
+def load_llr_history(test):
+
+    try:
+        history = _read_llr_history(llr_history_path(test.id))
+    except Exception:
+        _logger.warning('Failed to load LLR history for Test %s', test.id, exc_info=True)
+        return [[0, 0.0]]
+
+    return history or [[0, 0.0]]
+
+def record_llr_history(test):
+
+    path = llr_history_path(test.id)
+
+    with _history_lock(path):
+
+        try:
+            history = _read_llr_history(path)
+
+        except Exception:
+            _logger.warning('Corrupt LLR history %s; starting fresh', path, exc_info=True)
+            try: os.replace(path, path + '.corrupt')
+            except OSError: pass
+            history = None
+
+        history = history or [[0, 0.0]]
+
+        if test.games < history[-1][0]:
+            return
+
+        # Hold off until enough games have accumulated to be worth a sample.
+        # A finished test always records, so the curve reaches its endpoint.
+        played = test.games - history[-1][0]
+        if played < LLR_HISTORY_INTERVAL and not test.finished:
+            return
+
+        llr = test.currentllr
+        if not test.finished:
+            llr = LLR_HISTORY_ALPHA * llr + (1 - LLR_HISTORY_ALPHA) * history[-1][1]
+
+        point = [test.games, round(llr, 4), int(test.wins >= test.losses)]
+
+        if history[-1][0] == point[0]:
+            history[-1] = point
+        else:
+            history.append(point)
+
+        if history[0][0] != 0:
+            history.insert(0, [0, 0.0])
+
+        if len(history) >= LLR_HISTORY_SIZE * 2:
+            history = downsample_history(history, LLR_HISTORY_SIZE)
+
+        _write_llr_history(path, history)
 
 def extract_option(options, option):
 
@@ -365,6 +532,148 @@ def network_edit(request, engine, network):
 
     return OpenBench.views.redirect(request, '/networks/%s' % (network.engine), status='Applied changes')
 
+def notify_webhook(request, test_id):
+    test = Test.objects.get(id=test_id)
+
+    with ExitStack() as exit_stack:
+        webhooks     = exit_stack.enter_context(open('webhooks'))
+        webhook_urls = webhooks.readlines()
+
+        # Read mention info for discord
+        discord_info = exit_stack.enter_context(open('discord.json'))
+        discord_info = json.load(discord_info)
+
+        # Compute stats
+        lower, elo, upper = OpenBench.stats.Elo(test.results())
+        error   = max(upper - elo, elo - lower)
+        elo     = OpenBench.templatetags.mytags.twoDigitPrecision(elo)
+        error   = OpenBench.templatetags.mytags.twoDigitPrecision(error)
+        h0      = OpenBench.templatetags.mytags.twoDigitPrecision(test.elolower)
+        h1      = OpenBench.templatetags.mytags.twoDigitPrecision(test.eloupper)
+        outcome = 'passed' if test.passed else 'failed'
+
+        # Compute mentions
+        def name_to_mention(name):
+            return f'<@{discord_info["ids"][name]}>'
+
+        congrats = set()
+        notifies = set()
+
+        if test.author.lower() in discord_info['users']:
+            congrats.update(discord_info['users'][test.author.lower()]["congrats"])
+            notifies.update(discord_info['users'][test.author.lower()]["notifies"])
+
+        if test.base_engine.lower() in discord_info['engines']:
+            congrats.update(discord_info['engines'][test.base_engine.lower()]["congrats"])
+            notifies.update(discord_info['engines'][test.base_engine.lower()]["notifies"])
+
+        if test.dev_engine.lower() in discord_info['engines']:
+            congrats.update(discord_info['engines'][test.dev_engine.lower()]["congrats"])
+            notifies.update(discord_info['engines'][test.dev_engine.lower()]["notifies"])
+
+        congrats = sorted(list(congrats.union(notifies)))
+        notifies = sorted(list(notifies))
+
+        if test.passed:
+            message = 'Congratulations! ' + ' '.join(name_to_mention(name) for name in congrats)
+        else:
+            message = ' '.join(name_to_mention(name) for name in notifies)
+
+        # Compute test metadata
+        tokens = test.dev_options.split(' ')
+        dev_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Threads=')
+        ] + ['None'])[0]
+        dev_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Hash')
+        ] + ['None'])[0]
+
+        tokens = test.base_options.split(' ')
+        base_threads = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Threads=')
+        ] + ['None'])[0]
+        base_hash = ([
+            opt.partition('=')[2] for opt in tokens if opt.startswith('Hash=')
+        ] + ['None'])[0]
+
+        if test.test_mode == 'GAMES':
+            mode_string = f'{test.max_games} games'
+        else:
+            mode_string = f'SPRT [{h0}, {h1}]'
+
+        # Compute color
+
+        # Passed tests
+        if test.passed:
+            if test.test_mode == 'SPRT' and test.elolower + test.eloupper < 0:
+                # Simplification
+                color = 0x8CE3EC
+            else:
+                # Gainer
+                color = 0x76D58E
+        elif test.wins >= test.losses:
+            # Fail yellow
+            color = 0xC6CE6F
+        else:
+            # Fail red
+            color = 0xFFA590
+
+        # Fixed games test where 0 is within error bar is inconclusive
+        if test.test_mode == 'GAMES' and abs(elo) < error:
+            outcome = 'is inconclusive'
+            color = 0xCCCCCC
+
+        payload = {
+            'content': message,
+            'embeds': [{
+                'author': { 'name': test.author },
+                'title': f'Test `{test.dev.name}` vs `{test.base.name}` {outcome}',
+                'url': request.build_absolute_uri(f'/test/{test_id}'),
+                'color': color,
+                'fields': [
+                    {
+                        'name': 'Dev Config',
+                        'value': f'{test.dev_time_control}s Threads={dev_threads} Hash={dev_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Base Config',
+                        'value': f'{test.base_time_control}s Threads={base_threads} Hash={base_hash}MB',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Mode',
+                        'value': mode_string,
+                    },
+                    {
+                        'name': 'Wins',
+                        'value': f'{test.wins}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Losses',
+                        'value': f'{test.losses}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Draws',
+                        'value': f'{test.draws}',
+                        'inline': True,
+                    },
+                    {
+                        'name': 'Elo',
+                        'value': f'{elo} ± {error} (95%)',
+                    },
+                ] + test.use_penta * [{
+                    'name': 'Pentanomial (0-2)',
+                    'value': f'{test.LL}, {test.LD}, {test.DD}, {test.DW}, {test.WW}'
+                }],
+        }]}
+
+        return [
+            requests.post(webhook_url.rstrip(), json=payload)
+            for webhook_url in webhook_urls
+        ]
 
 # Purely Helper functions for Books views
 
@@ -610,6 +919,12 @@ def update_test(request, machine):
 
         test.save()
 
+        # Append an LLR sample for the workload page's history graph
+        if test.test_mode == 'SPRT':
+            try: record_llr_history(test)
+            except Exception:
+                _logger.warning('Failed to record LLR history for Test %s', test.id, exc_info=True)
+
         # Update Result object; No risk from concurrent access
         Result.objects.filter(id=result_id).update(
             games    = F('games'   ) + games,
@@ -636,5 +951,9 @@ def update_test(request, machine):
         Machine.objects.filter(id=machine_id).update(
             updated=timezone.now()
         )
+
+    # Send update to webhook, if it exists
+    if test.finished and os.path.exists("webhooks") and os.path.exists("discord.json"):
+        notify_webhook(request, test_id)
 
     return [{}, { 'stop' : True }][test.finished]

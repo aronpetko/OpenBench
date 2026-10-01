@@ -10,13 +10,29 @@ Scripts/Networks/*
 
 Media/*
 
-!Client/*.py
-!Client/cutechess-ob
-!Client/cutechess-ob.exe
-
 Media/PGNs/*
 Media/Networks/*
 Media/Events/*
 
 *.lock
 *.epd
+
+### venv ###
+# Virtualenv
+# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+.Python
+[Bb]in
+[Ii]nclude
+[Ll]ib
+[Ll]ib64
+[Ll]ocal
+[Ss]cripts
+pyvenv.cfg
+.venv
+pip-selfcheck.json
+
+db.json
+
+webhooks
+
+backup.json

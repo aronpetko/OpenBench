@@ -16,10 +16,18 @@ function copy_text(text) {
     }
 }
 
-function copy_text_from_element(element_id, keep_url) {
+function copy_text_from_element(element_id, keep_url, code_blocks=false) {
 
-    var text = document.getElementById(element_id).innerHTML;
-    text = text.replace(/<br>/g, "\n");
+    // innerText, not innerHTML: stat blocks carry colour-coding spans, and
+    // only the rendered text belongs on the clipboard. Hidden elements fall
+    // back to textContent, which is what we want there.
+    // Trailing whitespace only: a full trim() would eat the leading spaces
+    // that align the first row of a stat block with the rows under it
+    var element = document.getElementById(element_id);
+    var text = (element.innerText || element.textContent).replace(/\s+$/, '');
+
+    if (code_blocks)
+        text = "```\n" + text + "\n```";
 
     if (keep_url)
         text += "\n" + window.location.href;
@@ -117,8 +125,10 @@ function append_summary_section(table, label, rows, key_formatter) {
     header.className = 'table-header';
     header.appendChild(summary_cell('th', label));
 
-    ['Penta', 'Elo', 'Pairs', '%'].forEach(name => {
-        header.appendChild(summary_cell('th', name));
+    // Elo, Pairs and % are right aligned in the body, so their headers are too
+    header.appendChild(summary_cell('th', 'Penta'));
+    ['Elo', 'Pairs', '%'].forEach(name => {
+        header.appendChild(summary_cell('th', name, 'numeric'));
     });
 
     if (is_nps_available) {

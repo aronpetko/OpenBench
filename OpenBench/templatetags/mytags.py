@@ -19,6 +19,8 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 import django
+import html
+import json
 import re
 
 import OpenBench.config
@@ -26,6 +28,8 @@ import OpenBench.models
 import OpenBench.spsa_utils
 import OpenBench.stats
 import OpenBench.utils
+
+from django.utils.safestring import mark_safe
 
 def oneDigitPrecision(value):
     try:
@@ -75,7 +79,9 @@ def shortStatBlock(test):
     elif test.test_mode == 'SPRT':
         llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
             test.currentllr, test.lowerllr, test.upperllr, test.elolower, test.eloupper)
-        statlines = [llr_line, tri_line, penta_line] if test.use_penta else [llr_line, tri_line]
+        lower, elo, upper = OpenBench.stats.Elo(test.results())
+        elo_line = 'Elo: %0.2f +- %0.2f (95%%)' % (elo, max(upper - elo, elo - lower))
+        statlines = [llr_line, tri_line, penta_line, elo_line] if test.use_penta else [llr_line, tri_line]
 
     elif test.test_mode == 'GAMES':
         lower, elo, upper = OpenBench.stats.Elo(test.results())
@@ -277,6 +283,13 @@ def test_is_smp_odds(test):
     base_threads = int(OpenBench.utils.extract_option(test.base_options, 'Threads'))
     return dev_threads != base_threads
 
+def test_is_smp(test):
+    # Both sides multi-threaded: an SMP test, as opposed to SMP odds, where
+    # only one side has the extra threads
+    dev_threads  = int(OpenBench.utils.extract_option(test.dev_options , 'Threads'))
+    base_threads = int(OpenBench.utils.extract_option(test.base_options, 'Threads'))
+    return min(dev_threads, base_threads) > 1
+
 def test_is_time_odds(test):
     return test.dev_time_control != test.base_time_control
 
@@ -292,6 +305,7 @@ register.filter('workload_pretty_name', workload_pretty_name)
 register.filter('git_diff_text', git_diff_text)
 
 register.filter('test_is_smp_odds'  , test_is_smp_odds  )
+register.filter('test_is_smp'       , test_is_smp       )
 register.filter('test_is_time_odds' , test_is_time_odds )
 register.filter('test_is_fischer'   , test_is_fischer   )
 
@@ -305,3 +319,291 @@ def next(iterable, index):
 def previous(iterable, index):
     try: return iterable[int(index) - 1]
     except: return None
+
+
+def llr_history_graph(test, width=340, height=120):
+
+    ## Render the LLR-over-games series as a standalone inline SVG. Doing this
+    ## server-side keeps the workload page free of charting dependencies, and
+    ## lets the graph render before any JavaScript runs. The hover readout is
+    ## wired up in workload.html, using the JSON we stash on the wrapper.
+
+    if test.test_mode != 'SPRT':
+        return ''
+
+    history = list(OpenBench.utils.load_llr_history(test))
+
+    # The series always starts at the origin, and ends at the present
+    if not history or history[0][0] != 0:
+        history.insert(0, [0, 0.0])
+    if history[-1][0] != test.games or history[-1][1] != test.currentllr:
+        history.append([test.games, test.currentllr])
+
+    x_max = max(max(p[0] for p in history), 1)
+
+    # Center 0.00 vertically, and pad out past the widest observed value
+    observed = max(abs(test.lowerllr), abs(test.upperllr), max(abs(p[1]) for p in history))
+    extent   = max(observed * 1.15, 0.5)
+    y_min, y_max = -extent, extent
+
+    L, R, T, B = 8, 8, 8, 8
+    iw, ih = max(width - L - R, 1), max(height - T - B, 1)
+
+    sx = lambda v : L + iw * (v / x_max)
+    sy = lambda v : T + ih * (1.0 - (v - y_min) / (y_max - y_min))
+
+    points = [{
+        'g' : p[0], 'l' : round(p[1], 4),
+        'x' : round(sx(p[0]), 2), 'y' : round(sy(p[1]), 2),
+    } for p in history]
+
+    # How far a sample has travelled toward the bound it is heading for, 0..1.
+    # The colour is a function of this alone, so the same LLR always draws the
+    # same colour and neighbouring samples never disagree about their hue.
+    #
+    # Only the flat stretch within +-0.1 of zero reads as yellow. Past it the
+    # exponent bends the ramp hard, so the line finds its green or its red
+    # well before the LLR gets anywhere near a bound.
+    LLR_NEUTRAL = 0.1
+
+    def travel(p):
+        bound = abs(test.upperllr if p['l'] >= 0.0 else test.lowerllr)
+        room  = bound - LLR_NEUTRAL
+        if room <= 0.0: return 0.0
+        return min(max(abs(p['l']) - LLR_NEUTRAL, 0.0) / room, 1.0) ** 0.35
+
+    # Green above zero, red below: the sign is the whole of the hue, and the
+    # distance from zero is the whole of the strength. The neutral they both
+    # fade into is the yellow, not a grey -- an undecided test still reads as
+    # a colour on the same ramp rather than as a dead line.
+    def band(p):
+        if travel(p) < 0.40: return 'yellow'
+        return 'pos' if p['l'] >= 0.0 else 'neg'
+
+    # Carried in the payload so the hover dot lands on the same colour as the
+    # stretch of line under it, without the readout having to know the bounds
+    for p in points:
+        p['b'] = band(p)
+
+    ## The line is one polyline stroked with a gradient carrying a stop per
+    ## sample, rather than a run of flat-coloured segments meeting at hard
+    ## edges. Each stop's colour is read off the smoothed LLR alone: green
+    ## above zero, red below, deepening out of the yellow as the curve commits
+    ## to the bound it is heading for. The colour is a position on that one
+    ## ramp, so it moves with the curve rather than flipping about.
+    ##
+    ## The mix is left to CSS so the palette stays in the stylesheet; the class
+    ## on each stop is the flat fallback, used if color-mix is unavailable.
+
+    grad_id = 'llr-grad-%d' % (test.id)
+
+    def stop_color(p):
+        return 'color-mix(in srgb, var(--llr-%s) %d%%, var(--llr-yellow))' % (
+            'pos' if p['l'] >= 0.0 else 'neg', round(100 * travel(p)))
+
+    def stop(p):
+        return '<stop class="llr-stop-%s" offset="%.5f" style="stop-color: %s"/>' % (
+            band(p), (p['x'] - points[0]['x']) / span, stop_color(p))
+
+    span     = max(points[-1]['x'] - points[0]['x'], 1e-6)
+    drawable = len(points) >= 2 and points[-1]['x'] > points[0]['x']
+
+    gradient = '' if not drawable else (
+        '<linearGradient id="%s" gradientUnits="userSpaceOnUse" '
+        'x1="%.2f" y1="0" x2="%.2f" y2="0">%s</linearGradient>' % (
+            grad_id, points[0]['x'], points[-1]['x'],
+            ''.join(stop(p) for p in points)))
+
+    path = '' if not drawable else (
+        '<polyline class="llr-path" stroke="url(#%s)" points="%s"/>' % (
+            grad_id, ' '.join('%.2f,%.2f' % (p['x'], p['y']) for p in points)))
+
+    grid = []
+    for v in (y_max, 0.0, y_min):
+        grid.append('<line class="llr-grid" x1="%d" y1="%.2f" x2="%d" y2="%.2f"/>' % (
+            L, sy(v), width - R, sy(v)))
+    for v in (x_max / 4.0, x_max / 2.0, 3.0 * x_max / 4.0):
+        grid.append('<line class="llr-grid" x1="%.2f" y1="%d" x2="%.2f" y2="%d"/>' % (
+            sx(v), T, sx(v), height - B))
+
+    guides = []
+    for v, name in ((test.lowerllr, 'llr-bound'), (0.0, 'llr-zero'), (test.upperllr, 'llr-bound')):
+        guides.append('<line class="%s" x1="%d" y1="%.2f" x2="%d" y2="%.2f"/>' % (
+            name, L, sy(v), width - R, sy(v)))
+        if name == 'llr-bound':
+            guides.append('<text class="llr-bound-label" x="%d" y="%.2f">%+.2f</text>' % (
+                L + 4, sy(v) + (11.0 if v > 0 else -3.5), v))
+
+    last      = points[-1]
+    last_band = band(last)
+    clip_id   = 'llr-reveal-%d' % (test.id)
+
+    halo = '' if test.finished else (
+        '<circle class="llr-endpoint-halo llr-fill-%s" cx="%.2f" cy="%.2f" r="2.8"/>' % (
+            last_band, last['x'], last['y']))
+
+    return mark_safe((
+        '<div class="llr-history-widget" data-history="%s">'
+          '<div class="llr-history-chart">'
+            '<div class="llr-history-yaxis"><div>%+.2f</div><div>0.00</div><div>%+.2f</div></div>'
+            '<div class="llr-history-main">'
+              '<div class="llr-history-plot">'
+                '<svg class="llr-history-graph" viewBox="0 0 %d %d" preserveAspectRatio="none" role="img" aria-label="%s">'
+                  '<defs>%s<clipPath id="%s"><rect class="llr-reveal" x="0" y="0" width="%d" height="%d"/></clipPath></defs>'
+                  '<rect class="llr-bg" x="0" y="0" width="%d" height="%d"/>'
+                  '%s%s'
+                  '<g clip-path="url(#%s)">%s</g>'
+                  '<g class="llr-endpoint-grp">%s'
+                    '<circle class="llr-endpoint llr-fill-%s" cx="%.2f" cy="%.2f" r="2.8"/>'
+                  '</g>'
+                  '<line class="llr-hover-line" x1="%.2f" y1="%d" x2="%.2f" y2="%d"/>'
+                  '<circle class="llr-hover-point" cx="%.2f" cy="%.2f" r="3.2"/>'
+                  '<rect class="llr-hitbox" x="0" y="0" width="%d" height="%d"/>'
+                '</svg>'
+                '<div class="llr-history-tooltip"></div>'
+              '</div>'
+              '<div class="llr-history-xaxis"><div>0</div><div>%s</div><div>%s games</div></div>'
+            '</div>'
+          '</div>'
+        '</div>'
+    ) % (
+        html.escape(json.dumps(points, separators=(',', ':'))),
+        y_max, y_min,
+        width, height,
+        html.escape('LLR %.2f after %d games' % (test.currentllr, test.games)),
+        gradient, clip_id, width, height,
+        width, height,
+        ''.join(grid), ''.join(guides),
+        clip_id, path,
+        halo, last_band, last['x'], last['y'],
+        last['x'], T, last['x'], height - B,
+        last['x'], last['y'],
+        width, height,
+        insertCommas(int(round(x_max / 2.0))), insertCommas(x_max),
+    ))
+
+register.filter('llr_history_graph', llr_history_graph)
+
+
+## Stat Blocks, laid out as a labelled table
+##
+## The rows carry the classic OpenBench figures verbatim -- the same text you
+## would paste into a Discord channel -- with the label column uppercased and
+## the old "|" gutter dropped in favour of plain padding. Labels are left
+## aligned in a five-wide column so every figure starts at the same offset.
+##
+## The same rows back both the workload page and the index list, so a result
+## reads identically wherever you meet it. Values are the strongest tone,
+## groupings weaker, units weakest; the index badge restates those three tones
+## against its pastel background.
+##
+## The copy buttons read innerText, so the clipboard gets exactly what is on
+## screen, alignment included.
+
+def _sb(css_class, text):
+    return '<span class="%s">%s</span>' % (css_class, html.escape(text))
+
+def _sb_row(label, body):
+    return _sb('sb-label', '%-5s' % (label)) + '  ' + body
+
+def _sb_llr_row(test):
+    return _sb_row('LLR',
+        _sb('sb-value', '%0.2f' % (test.currentllr))
+      + _sb('sb-dim'  , ' (%0.2f, %0.2f)' % (test.lowerllr, test.upperllr))
+      + _sb('sb-dim'  , ' [%0.2f, %0.2f]' % (test.elolower, test.eloupper)))
+
+def _sb_elo_row(test):
+    lower, elo, upper = OpenBench.stats.Elo(test.results())
+    return _sb_row('ELO',
+        _sb('sb-value', '%0.2f' % (elo))
+      + _sb('sb-dim'  , ' +- ')
+      + _sb('sb-value', '%0.2f' % (max(upper - elo, elo - lower)))
+      + _sb('sb-unit' , ' (95%)'))
+
+def _sb_conf_row(test):
+    threads     = int(OpenBench.utils.extract_option(test.dev_options, 'Threads'))
+    hashmb      = int(OpenBench.utils.extract_option(test.dev_options, 'Hash'))
+    timecontrol = test.dev_time_control + ['s', '']['=' in test.dev_time_control]
+
+    return _sb_row('SPRT' if test.test_mode == 'SPRT' else 'CONF',
+        _sb('sb-value', timecontrol)
+      + _sb('sb-unit' , ' Threads=')
+      + _sb('sb-value', '%d' % (threads))
+      + _sb('sb-unit' , ' Hash=')
+      + _sb('sb-value', '%d' % (hashmb))
+      + _sb('sb-unit' , 'MB'))
+
+def _sb_games_row(test, note=''):
+    games, wins, losses, draws = test.as_nwld()
+
+    row = _sb('sb-unit', 'N: ') + _sb('sb-value', '%d' % (games)) + _sb('sb-unit', note)
+    for name, value in (('W', wins), ('L', losses), ('D', draws)):
+        row += _sb('sb-unit', ' %s: ' % (name)) + _sb('sb-value', '%d' % (value))
+
+    return _sb_row('GAMES', row)
+
+def _sb_penta_row(test):
+    penta = _sb('sb-dim', '[')
+    for i, value in enumerate(test.as_penta()):
+        if i: penta += _sb('sb-dim', ', ')
+        penta += _sb('sb-value', '%d' % (value))
+    return _sb_row('PENTA', penta + _sb('sb-dim', ']'))
+
+def _sb_spsa_rows(test):
+    spsa_run   = test.spsa_run # Avoid extra database accesses
+    iterations = test.games // (2 * spsa_run.pairs_per) if spsa_run.pairs_per else 0
+    total      = 2 * spsa_run.iterations * spsa_run.pairs_per
+
+    return [
+        _sb_row('TUNE', _sb('sb-value', '%d' % (spsa_run.parameters.count()))
+                      + _sb('sb-unit' , ' parameters')),
+
+        _sb_row('ITER', _sb('sb-value', insertCommas(iterations))
+                      + _sb('sb-dim'  , ' / ')
+                      + _sb('sb-value', insertCommas(spsa_run.iterations))),
+
+        _sb_row('GAMES', _sb('sb-value', insertCommas(test.games))
+                       + _sb('sb-dim'  , ' / ')
+                       + _sb('sb-value', insertCommas(total))),
+    ]
+
+def longStatBlockHTML(test):
+
+    assert test.test_mode != 'SPSA'
+
+    lines = [_sb_elo_row(test), _sb_conf_row(test)]
+
+    if test.test_mode == 'SPRT':
+        lines.append(_sb_llr_row(test))
+
+    lines.append(_sb_games_row(test))
+
+    if test.use_penta:
+        lines.append(_sb_penta_row(test))
+
+    return mark_safe('\n'.join(lines))
+
+def shortStatBlockHTML(test):
+
+    ## The index list already has its own columns for the engine, branch and
+    ## time control, so the config row is left off here.
+
+    if test.test_mode == 'SPSA':
+        lines = _sb_spsa_rows(test)
+
+    elif test.test_mode == 'SPRT':
+        lines = [_sb_elo_row(test), _sb_llr_row(test), _sb_games_row(test)]
+
+    elif test.test_mode == 'DATAGEN':
+        lines = [_sb_elo_row(test), _sb_games_row(test, '/%d' % (test.max_games))]
+
+    else: # GAMES
+        lines = [_sb_elo_row(test), _sb_games_row(test, '/%d' % (test.max_games))]
+
+    if test.test_mode != 'SPSA' and test.use_penta:
+        lines.append(_sb_penta_row(test))
+
+    return mark_safe('\n'.join(lines))
+
+register.filter('longStatBlockHTML', longStatBlockHTML)
+register.filter('shortStatBlockHTML', shortStatBlockHTML)

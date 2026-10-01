@@ -8,10 +8,18 @@
 {% block scripts %}
 
     <script src="{% static 'workload_utils.js' %}?{{ static_version }}"></script>
+    <script src="{% static 'llr_history.js' %}?{{ static_version }}"></script>
+
+    <script>
+        setTimeout(function() {
+            location.reload();
+        }, 60000); 
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetch_summary({{workload.id}});
+            init_llr_history_widgets();
         });
     </script>
 
@@ -21,8 +29,91 @@
 
     <div class="workload-container">
 
-    <div id="config" style="display: block; overflow-x: auto;">
-        <table class="test-config left-align wrappable" style="table-layout: auto; width: 100%;">
+    <!-- Headline: what is being tested, the numbers, and the LLR history.
+         The summary, the graph, the config table and the edit column all sit
+         in one grid, so the two rows share a left and a right column. -->
+
+    <h3 class="hero-title">
+        <span class="branch">{{workload.dev.name|prettyName}}</span>
+        {% if type == "TEST" or type == "DATAGEN" %}
+            <span class="diff-vs">vs</span>
+            <span class="branch">{{workload.base.name|prettyName}}</span>
+        {% endif %}
+        <a class="diff-link" href="{{workload|gitDiffLink}}">diff</a>
+    </h3>
+
+    <div class="workload-grid{% if not type == "TEST" or not workload.test_mode == "SPRT" %} no-graph{% endif %}">
+
+        <div class="hero-summary">
+
+                <!-- Elo, (SPRT/LLR if SPRT, otherwise CONF), Games -->
+                {% if type == "TEST" or type == "DATAGEN" %}
+                    <pre class="long-statblock" id="long-statblock">{{workload|longStatBlockHTML}}</pre>
+                {% elif type == "TUNE" %}
+                    <pre class="long-statblock" id="long-statblock">{{workload|shortStatBlockHTML}}</pre>
+                {% endif %}
+
+                {% if workload.info %}
+                    <div class="workload-info">{{workload.info}}</div>
+                {% endif %}
+
+                <div class="anchor-container hero-actions">
+
+                    <!-- Approve Button: For Admins, or Cross-approvers -->
+                    {% if not workload.approved and profile.approver and profile.user.username != workload.author %}
+                        <a class="anchorbutton btn-blue" href="/{{type|lower}}/{{workload.id}}/APPROVE">Approve</a>
+                    {% elif not workload.approved and request.user.is_superuser %}
+                        <a class="anchorbutton btn-blue" href="/{{type|lower}}/{{workload.id}}/APPROVE">Approve</a>
+                    {% else %}
+                        <a class="anchorbutton btn-disabled">Approve</a>
+                    {% endif %}
+
+                    <!-- Restart Button: For Approvers or Workload Authors of finished workloads -->
+                    {% if workload.finished and not workload.passed and not workload.failed and profile.approver %}
+                        <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/RESTART">Restart</a>
+                    {% elif workload.finished and not workload.passed and not workload.failed and profile.user.username == workload.author %}
+                        <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/RESTART">Restart</a>
+                    {% elif workload.finished %}
+                        <a class="anchorbutton btn-disabled">Restart</a>
+                    {% endif %}
+
+                    <!-- Stop Button: For Approvers or Workload Authors of active workloads -->
+                    {% if not workload.finished and profile.approver %}
+                        <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/STOP">Stop</a>
+                    {% elif not workload.finished and profile.user.username == workload.author %}
+                        <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/STOP">Stop</a>
+                    {% elif not workload.finished %}
+                        <a class="anchorbutton btn-disabled">Stop</a>
+                    {% endif %}
+
+                    <!-- Delete/Restore Button: For Approvers or Workload Authors -->
+                    {% if profile.approver or profile.user.username == workload.author %}
+                        {% if workload.deleted %}
+                            <a class="anchorbutton btn-preset" href="/{{type|lower}}/{{workload.id}}/RESTORE">Restore</a>
+                        {% else %}
+                            <a class="anchorbutton btn-red" href="/{{type|lower}}/{{workload.id}}/DELETE">Delete</a>
+                        {% endif %}
+                    {% else %}
+                        {% if workload.deleted %}
+                            <a class="anchorbutton btn-disabled">Restore</a>
+                        {% else %}
+                            <a class="anchorbutton btn-disabled">Delete</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            </div>
+
+        <!-- LLR over games, for SPRT workloads -->
+        {% if type == "TEST" and workload.test_mode == "SPRT" %}
+            <div class="hero-graph">
+                <div class="llr-history-label">LLR History</div>
+                {{workload|llr_history_graph}}
+            </div>
+        {% endif %}
+
+    <div id="config">
+        <table class="test-config left-align wrappable" style="table-layout: auto; width: auto;">
 
             <tr><td class="td-label">Author</td><td>{{workload.author|capfirst}}</td></tr>
             <tr><td class="td-label">Creation</td><td class="timestamp">{{workload.creation|date:'U'}}</td></tr>
@@ -75,94 +166,41 @@
         </table>
     </div>
 
-    <div id="actions" class="ml-3">
-
-        <!-- Dev vs Base [Git Diff Link] -->
-        <h4><a href="{{workload|gitDiffLink}}">{{workload|git_diff_text}}</a></h4>
-
-        <div class="anchor-container">
-
-            <!-- Approve Button: For Admins, or Cross-approvers -->
-            {% if not workload.approved and profile.approver and profile.user.username != workload.author %}
-                <a class="anchorbutton btn-blue" href="/{{type|lower}}/{{workload.id}}/APPROVE">Approve</a>
-            {% elif not workload.approved and request.user.is_superuser %}
-                <a class="anchorbutton btn-blue" href="/{{type|lower}}/{{workload.id}}/APPROVE">Approve</a>
-            {% else %}
-                <a class="anchorbutton btn-disabled">Approve</a>
-            {% endif %}
-
-            <!-- Restart Button: For Approvers or Workload Authors of finished workloads -->
-            {% if workload.finished and not workload.passed and not workload.failed and profile.approver %}
-                <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/RESTART">Restart</a>
-            {% elif workload.finished and not workload.passed and not workload.failed and profile.user.username == workload.author %}
-                <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/RESTART">Restart</a>
-            {% elif workload.finished %}
-                <a class="anchorbutton btn-disabled">Restart</a>
-            {% endif %}
-
-            <!-- Stop Button: For Approvers or Workload Authors of active workloads -->
-            {% if not workload.finished and profile.approver %}
-                <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/STOP">Stop</a>
-            {% elif not workload.finished and profile.user.username == workload.author %}
-                <a class="anchorbutton btn-yellow" href="/{{type|lower}}/{{workload.id}}/STOP">Stop</a>
-            {% elif not workload.finished %}
-                <a class="anchorbutton btn-disabled">Stop</a>
-            {% endif %}
-
-            <!-- Delete/Restore Button: For Approvers or Workload Authors -->
-            {% if profile.approver or profile.user.username == workload.author %}
-                {% if workload.deleted %}
-                    <a class="anchorbutton btn-preset" href="/{{type|lower}}/{{workload.id}}/RESTORE">Restore</a>
-                {% else %}
-                    <a class="anchorbutton btn-red" href="/{{type|lower}}/{{workload.id}}/DELETE">Delete</a>
-                {% endif %}
-            {% else %}
-                {% if workload.deleted %}
-                    <a class="anchorbutton btn-disabled">Restore</a>
-                {% else %}
-                    <a class="anchorbutton btn-disabled">Delete</a>
-                {% endif %}
-            {% endif %}
-        </div>
+    <div id="actions">
 
         <!-- Copy Button: Copy the current results statblock -->
         {% if type == "TEST" or type == "DATAGEN" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true)">Copy Stat Block</a>
+                <a class="anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true)">Copy Stat Block</a>
+            </div>
+
+            <div class="anchor-container">
+                <a class="anchorbutton btn-blue" onclick="copy_text_from_element('long-statblock', true, true)">Copy Stat Block (Code Blocked)</a>
             </div>
         {% endif %}
 
         <!-- PGN Download Button -->
         {% if workload.upload_pgns != "FALSE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" href="/api/pgns/{{workload.id}}/">Download PGN Archive</a>
+                <a class="anchorbutton btn-blue" href="/api/pgns/{{workload.id}}/">Download PGN Archive</a>
             </div>
         {% endif %}
 
         <!-- Copies Raw SPSA Input from /api/spsa/{{workload.id}}/inputs/ -->
         {% if type == "TUNE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_spsa_inputs({{workload.id}})">Copy SPSA Inputs</a>
+                <a class="anchorbutton btn-blue" onclick="copy_spsa_inputs({{workload.id}})">Copy SPSA Inputs</a>
             </div>
         {% endif %}
 
         <!-- Copies Optimal Values from /api/spsa/{{workload.id}}/outputs/ -->
         {% if type == "TUNE" %}
             <div class="anchor-container">
-                <a class="mt-1 anchorbutton btn-blue" onclick="copy_spsa_outputs({{workload.id}})">Copy SPSA Outputs</a>
+                <a class="anchorbutton btn-blue" onclick="copy_spsa_outputs({{workload.id}})">Copy SPSA Outputs</a>
             </div>
         {% endif %}
 
-        <!-- Elo, (SPRT/LRR if SPRT, otherwise CONF), Games -->
-        {% if type == "TEST" %}
-            <pre class="long-statblock" id="long-statblock">{{workload|longStatBlock|linebreaksbr}}</pre>
-        {% elif type == "TUNE" %}
-            <pre class="long-statblock" id="long-statblock">{{workload|shortStatBlock|linebreaksbr}}</pre>
-        {% elif type == "DATAGEN" %}
-            <pre class="long-statblock" id="long-statblock">{{workload|longStatBlock|linebreaksbr}}</pre>
-        {% endif %}
-
-        <!-- Forum to modify the Priority, Throughput, or (Tests only) Workload Size -->
+        <!-- Form to modify the Info, Priority, Throughput, or Workload Size -->
         <form method="POST" action="/{{type|lower}}/{{workload.id}}/MODIFY/">
             {% csrf_token %}
             <div class="form">
@@ -192,9 +230,9 @@
 
                     <!-- Edit Button: For Approvers or Test Authors -->
                     {% if profile.approver or profile.user.username == workload.author %}
-                        <input class="anchorbutton btn-blue w-100" type="submit" name="submit" value="Modify">
+                        <input class="mt-2 anchorbutton btn-blue w-100" type="submit" name="submit" value="Modify">
                     {% else %}
-                        <input class="anchorbutton btn-disabled w-100" type="submit" name="submit" value="Modify">
+                        <input class="mt-2 anchorbutton btn-disabled w-100" type="submit" name="submit" value="Modify">
                     {% endif %}
                 </div>
             </div>
@@ -203,7 +241,7 @@
 
     <!-- SPSA Paramater Summary, for Tunes -->
     {% if type == "TUNE" %}
-        <div id="parameters" class="w-100 mt-3" style="float:left;">
+        <div id="parameters" class="grid-row">
             <table class="stripes wrappable">
                 <thead>
                     <tr class="table-header">
@@ -220,9 +258,7 @@
                 </thead>
                 <tbody id="spsa-digest-button-container">
                     <tr>
-                        <td colspan="9" style="padding: 0;">
-                            <button class="w-100 anchorbutton btn-blue" type="submit" onclick="fetch_spsa_digest({{workload.id}})">Show SPSA Digest</button>
-                        </td>
+                        <td colspan="9" style="padding: 0;"><button class="w-100 anchorbutton btn-blue" type="submit" onclick="fetch_spsa_digest({{workload.id}})">Show SPSA Digest</button></td>
                     </tr>
                 </tbody>
                 <tbody id="spsa-digest-body-container" style="display: none;">
@@ -233,10 +269,10 @@
     {% endif %}
 
     <!-- Aggregate pentanomial summary; fetched automatically on page load -->
-    <div id="summary-container" class="w-100 mt-3" style="float:left;"></div>
+    <div id="summary-container" class="grid-row"></div>
 
-    <div id="results" class="w-100 mt-3" style="float:left;">
-        <table class="stripes wrappable">
+    <div id="results" class="grid-row">
+        <table class="stripes hoverable wrappable">
             <tr class="table-header">
                 <th>#</th>
                 <th>User</th>
@@ -254,6 +290,8 @@
 
         <!-- Individual per-machine results are only ever fetched on demand -->
         <button class="w-100 mt-1 anchorbutton btn-blue" type="submit" onclick="fetch_results({{workload.id}})">Fetch Individual Results</button>
+    </div>
+
     </div>
 
     </div>

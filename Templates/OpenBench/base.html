@@ -5,6 +5,7 @@
     {% load static %}
 
     <head>
+        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}?{{ static_version }}">
@@ -15,10 +16,20 @@
 
         <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' rel='stylesheet'>
 
-        <link rel="preconnect" href="https://fonts.gstatic.com">
-        <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
 
-        <title>{% block title %}OpenBench{% endblock %}</title>
+        <title>{% block title %}FuryBench{% endblock %}</title>
+
+        <script>
+            // Applied before first paint, so a collapsed sidebar does not
+            // flash open on every navigation
+            try {
+                if (localStorage.getItem('sidebar-collapsed') === '1')
+                    document.documentElement.classList.add('sidebar-collapsed');
+            } catch (error) { }
+        </script>
 
         {% block scripts %}
         {% endblock %}
@@ -81,6 +92,95 @@
                     });
                 }
 
+                {
+                    // Mark the sidebar entry matching the current page, so it
+                    // is obvious where you are without reading every label
+
+                    const path  = window.location.pathname.replace(/\/+$/, '') || '/';
+                    const links = document.querySelectorAll('#sidebar li a[href^="/"]');
+
+                    let best = null, best_length = 0;
+
+                    links.forEach(link => {
+                        const href = link.getAttribute('href').replace(/\/+$/, '') || '/';
+                        const hit  = path === href || path.startsWith(href + '/');
+                        if (hit && href.length >= best_length) {
+                            best = link; best_length = href.length;
+                        }
+                    });
+
+                    if (best) best.classList.add('active');
+                }
+
+                {
+                    // Turn the engine line into a marquee: the whole bulleted
+                    // list slides rightwards through the width of the column,
+                    // looping seamlessly against a second copy of itself.
+                    // Without this script the line stays as it is authored,
+                    // every engine on one static row.
+
+                    const line = document.querySelector('.engine-line');
+                    const slot = line && line.querySelector('.engine-carousel');
+
+                    if (slot) {
+
+                        // The authored items become the first copy; the track
+                        // holds that copy and, once we know it overflows, an
+                        // identical clone right behind it
+                        const track = document.createElement('span');
+                        const copy  = document.createElement('span');
+
+                        track.className = 'engine-track';
+                        copy.className  = 'engine-track-copy';
+
+                        while (slot.firstChild)
+                            copy.appendChild(slot.firstChild);
+
+                        track.appendChild(copy);
+                        slot.appendChild(track);
+                        line.classList.add('is-carousel');
+
+                        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+                        const layout = () => {
+
+                            const clone = track.querySelector('.engine-track-clone');
+                            if (clone) clone.remove();
+
+                            const width = copy.getBoundingClientRect().width;
+
+                            // Everything fits, or motion is unwelcome: leave
+                            // the list sitting centred and still
+                            if (still.matches || width <= slot.getBoundingClientRect().width + 1) {
+                                line.classList.remove('is-scrolling');
+                                return;
+                            }
+
+                            const behind = copy.cloneNode(true);
+                            behind.classList.add('engine-track-clone');
+                            behind.setAttribute('aria-hidden', 'true');
+                            track.appendChild(behind);
+
+                            // One full loop a minute, whatever the list holds
+                            track.style.animationDuration = '60s';
+                            line.classList.add('is-scrolling');
+                        };
+
+                        layout();
+
+                        // The mono face may still be loading, in which case the
+                        // measurement above was taken against the fallback
+                        if (document.fonts && document.fonts.ready)
+                            document.fonts.ready.then(layout);
+
+                        let resizing = null;
+                        window.addEventListener('resize', () => {
+                            clearTimeout(resizing);
+                            resizing = setTimeout(layout, 150);
+                        });
+                    }
+                }
+
             }, false);
 
             document.addEventListener('submit', event => {
@@ -106,6 +206,12 @@
             function toggle_sidebar() {
                 document.body.classList.toggle('sidebar-open')
             }
+
+            function toggle_sidebar_collapsed() {
+                const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+                try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0'); }
+                catch (error) { /* private browsing; the toggle still works for this page */ }
+            }
         </script>
     </head>
 
@@ -113,79 +219,113 @@
 
         <div id="sidebar">
 
+            <div class="brand">
+                <a class="brand-link" href="/">
+                    <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                    <span class="brand-text">
+                        <span class="brand-name">FuryBench</span>
+                        <span class="brand-sub">Testing Framework</span>
+                    </span>
+                </a>
+                <button id="sidebar-collapse" onclick="toggle_sidebar_collapsed()"
+                        title="Collapse sidebar" aria-label="Collapse sidebar">
+                    <i class="fa-solid fa-angles-left fa-fw"></i>
+                </button>
+            </div>
+
             <ul>
                 <li class="header">Admin</li>
                 {% if user.is_authenticated %}
-                    <li><a href="/logout/"><i class="fa-solid fa-right-from-bracket fa-fw"></i> Logout</a></li>
-                    <li><a href="/profile/"><i class="fa-solid fa-user fa-fw"></i> Profile</a></li>
+                    <li><a title="Logout" href="/logout/"><i class="fa-solid fa-right-from-bracket fa-fw"></i><span class="nav-label">Logout</span></a></li>
+                    <li><a title="Profile" href="/profile/"><i class="fa-solid fa-user fa-fw"></i><span class="nav-label">Profile</span></a></li>
                 {% else %}
-                    <li><a href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i> Login</a></li>
-                    <li><a href="/register"><i class="fa-solid fa-registered fa-fw"></i> Register</a></li>
+                    <li><a title="Login" href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i><span class="nav-label">Login</span></a></li>
+                    <li><a title="Register" href="/register"><i class="fa-solid fa-registered fa-fw"></i><span class="nav-label">Register</span></a></li>
                 {% endif %}
-                <li><a href="/manage"><i class="fa-solid fa-sliders fa-fw"></i> Manage</a></li>
+                <li><a title="Manage" href="/manage"><i class="fa-solid fa-sliders fa-fw"></i><span class="nav-label">Manage</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Tests</li>
-                <li><a href="/index"><i class="fa-solid fa-house fa-fw"></i> Index</a></li>
-                <li><a href="/greens"><i class="fa-solid fa-heart fa-fw"></i> Greens</a></li>
-                <li><a href="/search"><i class="fa-solid fa-magnifying-glass fa-fw"></i> Search</a></li>
+                <li><a title="Index" href="/index"><i class="fa-solid fa-house fa-fw"></i><span class="nav-label">Index</span></a></li>
+                <li><a title="Greens" href="/greens"><i class="fa-solid fa-heart fa-fw"></i><span class="nav-label">Greens</span></a></li>
+                <li><a title="Search" href="/search"><i class="fa-solid fa-magnifying-glass fa-fw"></i><span class="nav-label">Search</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Actions</li>
-                <li><a href="/test/new/"><i class="fa-solid fa-plus fa-fw"></i> Create Test</a></li>
-                <li><a href="/tune/new/"><i class="fa-solid fa-vial fa-fw"></i> Create Tune</a></li>
-                <li><a href="/datagen/new/"><i class="fa-solid fa-database fa-fw"></i> Create Datagen</a></li>
-                <li><a href="/newNetwork"><i class="fa-solid fa-upload fa-fw"></i> Upload Net</a></li>
+                <li><a title="Create Test" href="/test/new/"><i class="fa-solid fa-plus fa-fw"></i><span class="nav-label">Create Test</span></a></li>
+                <li><a title="Create Tune" href="/tune/new/"><i class="fa-solid fa-vial fa-fw"></i><span class="nav-label">Create Tune</span></a></li>
+                <li><a title="Create Datagen" href="/datagen/new/"><i class="fa-solid fa-database fa-fw"></i><span class="nav-label">Create Datagen</span></a></li>
+                <li><a title="Upload Net" href="/newNetwork"><i class="fa-solid fa-upload fa-fw"></i><span class="nav-label">Upload Net</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Info</li>
-                <li><a href="/users"><i class="fa-solid fa-users fa-fw"></i> Users</a></li>
-                <li><a href="/events"><i class="fa-solid fa-circle-exclamation fa-fw"></i> Events</a></li>
-                <li><a href="/errors"><i class="fa-solid fa-exclamation-triangle fa-fw"></i> Errors</a></li>
-                <li><a href="/machines"><i class="fa-solid fa-microchip fa-fw"></i> Machines</a></li>
-                <li><a href="/networks"><i class="fa-solid fa-circle-nodes fa-fw"></i> Networks</a></li>
+                <li><a title="Users" href="/users"><i class="fa-solid fa-users fa-fw"></i><span class="nav-label">Users</span></a></li>
+                <li><a title="Events" href="/events"><i class="fa-solid fa-circle-exclamation fa-fw"></i><span class="nav-label">Events</span></a></li>
+                <li><a title="Errors" href="/errors"><i class="fa-solid fa-exclamation-triangle fa-fw"></i><span class="nav-label">Errors</span></a></li>
+                <li><a title="Machines" href="/machines"><i class="fa-solid fa-microchip fa-fw"></i><span class="nav-label">Machines</span></a></li>
+                <li><a title="Networks" href="/networks"><i class="fa-solid fa-circle-nodes fa-fw"></i><span class="nav-label">Networks</span></a></li>
             </ul>
-
-            <hr>
 
             <ul>
                 <li class="header">Support</li>
-                <li><a href="{{config.client_repo_url}}"><i class="fa-brands fa-github fa-fw"></i> OpenBench</a></li>
-                <li><a href="https://discord.gg/9MVg7fBTpM"><i class="fa-brands fa-discord fa-fw"></i> Discord</a></li>
+                <li><a title="OpenBench" href="{{config.client_repo_url}}"><i class="fa-brands fa-github fa-fw"></i><span class="nav-label">OpenBench</span></a></li>
+                <li><a title="Discord" href="https://discord.gg/9MVg7fBTpM"><i class="fa-brands fa-discord fa-fw"></i><span class="nav-label">Discord</span></a></li>
             </ul>
 
-            <hr>
-
+            <!-- Engines developed here, split from the ones we only ever
+                 test against. home_engines is the same list the ticker uses. -->
             <ul>
-                <li class="header">Engines</li>
+                <li class="header">Our Engines</li>
                 {% for engine in engines %}
-                    <li><a href="{{engine.source}}">{{engine.name}}</a></li>
+                    {% if engine.name in config.home_engines %}
+                        <li><a title="{{engine.name}}" href="{{engine.source}}"><i class="fa-solid fa-chess-knight fa-fw"></i><span class="nav-label">{{engine.name}}</span></a></li>
+                    {% endif %}
                 {% endfor %}
             </ul>
 
-            <hr>
+            <ul>
+                <li class="header">External Engines</li>
+                {% for engine in engines %}
+                    {% if engine.name not in config.home_engines %}
+                        <li><a title="{{engine.name}}" href="{{engine.source}}"><i class="fa-solid fa-chess-pawn fa-fw"></i><span class="nav-label">{{engine.name}}</span></a></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
 
         </div>
 
         <div id="content-parent">
+
+            <!-- The header and the engine line sit outside #content, which is
+                 capped to a reading width on most pages but runs the full
+                 window on the index and search. Out here they get the same
+                 width on every page, and the engine line has the whole column
+                 to fit on one row. -->
+
+            <div id="content-header">
+                <button id="sidebar-toggle" onclick="toggle_sidebar()" aria-label="Toggle navigation">
+                    <i class="fa-solid fa-bars fa-fw"></i>
+                </button>
+                <h2>
+                    <a class="site-title" href="/">FuryBench&nbsp;Testing&nbsp;Framework</a>
+                </h2>
+            </div>
+
+            <!-- The engines developed here. Deliberately not config.engines:
+                 that list also carries engines we only ever test against.
+                 Written as the full bulleted line, which is what shows
+                 without JavaScript; the script slides it as a marquee. -->
+            {% if config.home_engines %}
+            <!-- No whitespace between the spans: the separators are drawn by
+                 CSS, and a newline here would collapse into a stray space that
+                 lands on one side of every bullet only. -->
+            <div class="engine-line"><span class="engine-line-label">home to</span><span class="engine-carousel">{% for engine in config.home_engines %}<span class="engine-line-item">{{engine}}</span>{% endfor %}</span></div>
+            {% endif %}
+
             <div id="content" class="pb-5">
-                <div id="content-header">
-                    <button id="sidebar-toggle" onclick="toggle_sidebar()">
-                        <i class="fa-solid fa-bars fa-fw"></i>
-                    </button>
-                    <h2>
-                        <a class="site-title" href="/">OpenBench&nbsp;Testing&nbsp;Framework</a>
-                    </h2>
-                </div>
 
                 {% if request.session.error_message %}
                     <div class="error-message">
