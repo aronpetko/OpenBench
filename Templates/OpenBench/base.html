@@ -181,6 +181,72 @@
                     }
                 }
 
+                {
+                    // Fade the tail of a note that does not fit. The CSS clamps
+                    // .test-info to two lines and cuts whatever runs past them;
+                    // here we find the last character that still fits and ramp
+                    // out the handful before it, so the note trails off at the
+                    // exact character where it was cut rather than at a fixed
+                    // distance from the right edge that the text may never
+                    // reach. Notes that fit are left alone.
+
+                    const RAMP = [0.78, 0.60, 0.44, 0.29, 0.16, 0.07];
+
+                    const notes = document.querySelectorAll('#content .test-list .test-info');
+
+                    const fits = note => note.scrollHeight <= note.clientHeight + 1;
+
+                    const fade = note => {
+
+                        const full = note.dataset.info !== undefined
+                            ? note.dataset.info : (note.dataset.info = note.textContent);
+
+                        note.textContent = full;
+                        if (fits(note)) return;
+
+                        // Largest prefix of the note that still fits in the
+                        // clamp. Every probe is a layout, so bisect rather than
+                        // walking a character at a time.
+                        let low = 0, high = full.length;
+
+                        while (low < high) {
+                            const mid = (low + high + 1) >> 1;
+                            note.textContent = full.slice(0, mid);
+                            if (fits(note)) low = mid; else high = mid - 1;
+                        }
+
+                        // The last character that fits is usually mid-word, and
+                        // the ramp is what says so; a trailing space would only
+                        // spend a step of the ramp on nothing.
+                        const kept = full.slice(0, low).replace(/\s+$/, '');
+                        const solid = Math.max(0, kept.length - RAMP.length);
+
+                        note.textContent = kept.slice(0, solid);
+
+                        [...kept.slice(solid)].forEach((character, index) => {
+                            const step = document.createElement('span');
+                            step.textContent = character;
+                            step.style.opacity = RAMP[index + RAMP.length - (kept.length - solid)];
+                            note.appendChild(step);
+                        });
+                    };
+
+                    const fade_all = () => notes.forEach(fade);
+
+                    fade_all();
+
+                    // The measurements above were taken against whatever face
+                    // was loaded at the time, and the column is fluid
+                    if (document.fonts && document.fonts.ready)
+                        document.fonts.ready.then(fade_all);
+
+                    let refading = null;
+                    window.addEventListener('resize', () => {
+                        clearTimeout(refading);
+                        refading = setTimeout(fade_all, 150);
+                    });
+                }
+
             }, false);
 
             document.addEventListener('submit', event => {

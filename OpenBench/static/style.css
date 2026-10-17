@@ -61,7 +61,7 @@
        white moves a dark tone much further, in relative terms, than it moved
        the pastels these replaced. */
     --band-lift  : 0%;
-    --stat-green : #2E436C;
+    --stat-green : #2E6C4C;
     --stat-blue  : #317986;
     --stat-yellow: #846536;
     --stat-red   : #6E282B;
@@ -1075,7 +1075,7 @@ html.sidebar-collapsed #sidebar ul + ul {
     box-sizing: border-box;
     width: 0;
     min-width: 100%;
-    max-height: 4.4em;
+    max-height: 2.8em;
     margin-top: 0.15rem;
     overflow: hidden;
     color: var(--fg-3);
@@ -1083,6 +1083,11 @@ html.sidebar-collapsed #sidebar ul + ul {
     white-space: normal;
     overflow-wrap: break-word;
     line-height: 1.4;
+
+    /* Two lines. A note longer than that is trimmed by script to the last
+       characters that fit and those characters are ramped out one by one --
+       see the .test-info block in base.html. The overflow rule is what a
+       reader without that script sees: the same two lines, cut square. */
 }
 
 /* Dynamic summary and results tables. Numeric headers sit over their column,
