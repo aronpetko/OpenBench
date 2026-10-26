@@ -690,6 +690,13 @@ def scripts(request):
 #                              CLIENT HOOK VIEWS                              #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+# CPUs which are temporarily refused service, matched against cpu_name
+BLOCKED_CPUS = [ '7B13' ]
+
+def is_blocked_cpu(info):
+    cpu_name = str(info.get('cpu_name', '')).upper()
+    return any(blocked in cpu_name for blocked in BLOCKED_CPUS)
+
 def verify_worker(function):
 
     def wrapped_verify_worker(*args, **kwargs):
@@ -697,6 +704,10 @@ def verify_worker(function):
         # Get the machine, assuming it exists
         try: machine = Machine.objects.get(id=int(args[0].POST['machine_id']))
         except: return JsonResponse({ 'error' : 'Bad Client Version: Bad Machine Id' })
+
+        # Cut off any existing sessions for CPUs which are blocked
+        if is_blocked_cpu(machine.info):
+            return JsonResponse({ 'error' : 'This CPU is not accepted by the server' })
 
         # Ensure the Client is using the same version as the Server
         if machine.info['client_ver'] != OPENBENCH_CONFIG['client_version']:
@@ -760,6 +771,10 @@ def client_worker_info(request):
 
     if info.get('client_ver') != expected_ver:
         return JsonResponse({ 'error' : 'Bad Client Version: Expected %d' % (expected_ver)})
+
+    # Refuse to create Machines for CPUs which are blocked
+    if is_blocked_cpu(info):
+        return JsonResponse({ 'error' : 'This CPU is not accepted by the server' })
 
     # Create a new Machine for this session
     machine = Machine(user=user, info=info)
